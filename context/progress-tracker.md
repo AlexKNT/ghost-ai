@@ -13,6 +13,7 @@ Update this file whenever the current phase, active feature, or implementation s
 ## Completed
 
 - 01-design-system — shadcn/ui setup, core components, lucide-react, cn() helper
+- 02-editor-chrome — Editor layout shell and navigation
 
 ## In Progress
 
@@ -20,7 +21,7 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Next Up
 
-- 02-editor-chrome — Editor layout shell and navigation
+- 03-auth — Authentication and route protection
 
 ## Open Questions
 
