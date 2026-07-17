@@ -8,12 +8,13 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Current Goal
 
-- Install and configure shadcn/ui with core components. Install lucide-react. Create `lib/utils.ts` with `cn()` helper. Ensure dark theme tokens are applied.
+- Build project dialogs (create, rename, delete), editor home screen, and sidebar project actions with mock data.
 
 ## Completed
 
 - 01-design-system — shadcn/ui setup, core components, lucide-react, cn() helper
 - 02-editor-chrome — Editor layout shell and navigation
+- 04-project-dialogs — Project dialogs, editor home, sidebar actions, and mobile improvements
 
 ## In Progress
 

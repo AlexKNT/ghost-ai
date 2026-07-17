@@ -1,16 +1,44 @@
 "use client"
 
-import { Plus, X } from "lucide-react"
+import { MoreHorizontal, Plus, X, Pencil, Trash2 } from "lucide-react"
+import { useState, useRef, useEffect } from "react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 
+import type { MockProject } from "@/components/editor/use-project-dialogs"
+
+/* -------------------------------------------------------------------------- */
+/*  Mock data                                                                 */
+/* -------------------------------------------------------------------------- */
+
+const MOCK_MY_PROJECTS: MockProject[] = [
+  { id: "1", name: "E-Commerce Platform", slug: "e-commerce-platform", owned: true },
+  { id: "2", name: "Microservices Backend", slug: "microservices-backend", owned: true },
+  { id: "3", name: "Design System", slug: "design-system", owned: false },
+]
+
+const MOCK_SHARED_PROJECTS: MockProject[] = [
+  { id: "4", name: "Mobile App Redesign", slug: "mobile-app-redesign", owned: false },
+  { id: "5", name: "Analytics Pipeline", slug: "analytics-pipeline", owned: false },
+]
+
+/* -------------------------------------------------------------------------- */
+/*  Types                                                                     */
+/* -------------------------------------------------------------------------- */
+
 interface ProjectSidebarProps {
   isOpen: boolean
   onClose: () => void
   onNewProject?: () => void
+  onRenameProject?: (project: MockProject) => void
+  onDeleteProject?: (project: MockProject) => void
 }
+
+/* -------------------------------------------------------------------------- */
+/*  Empty State                                                               */
+/* -------------------------------------------------------------------------- */
 
 function EmptyState({ label }: { label: string }) {
   return (
@@ -35,10 +63,116 @@ function EmptyState({ label }: { label: string }) {
   )
 }
 
+/* -------------------------------------------------------------------------- */
+/*  Project Item                                                              */
+/* -------------------------------------------------------------------------- */
+
+function ProjectItem({
+  project,
+  onRename,
+  onDelete,
+}: {
+  project: MockProject
+  onRename?: (project: MockProject) => void
+  onDelete?: (project: MockProject) => void
+}) {
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  // Close menu on click outside
+  useEffect(() => {
+    if (!menuOpen) return
+    const handleClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClick)
+    return () => document.removeEventListener("mousedown", handleClick)
+  }, [menuOpen])
+
+  return (
+    <div
+      className={cn(
+        "group flex items-center justify-between rounded-xl px-3 py-2 transition-colors",
+        "hover:bg-subtle"
+      )}
+    >
+      <span className="truncate text-sm text-copy-secondary">{project.name}</span>
+
+      {/* Actions — only for owned projects */}
+      {project.owned && (
+        <div className="relative shrink-0" ref={menuRef}>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              setMenuOpen((prev) => !prev)
+            }}
+            className={cn(
+              "inline-flex size-6 items-center justify-center rounded-lg transition-all",
+              "text-copy-muted opacity-0 group-hover:opacity-100",
+              "hover:bg-elevated hover:text-copy-primary",
+              menuOpen && "opacity-100 bg-elevated text-copy-primary"
+            )}
+            aria-label="Project actions"
+          >
+            <MoreHorizontal className="size-3.5" />
+          </button>
+
+          {menuOpen && (
+            <div
+              className={cn(
+                "absolute right-0 top-full z-50 mt-1 w-36 overflow-hidden rounded-xl",
+                "border border-border bg-elevated shadow-lg"
+              )}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false)
+                  onRename?.(project)
+                }}
+                className={cn(
+                  "flex w-full items-center gap-2 px-3 py-2 text-xs text-copy-secondary",
+                  "transition-colors hover:bg-subtle hover:text-copy-primary"
+                )}
+              >
+                <Pencil className="size-3.5" />
+                Rename
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false)
+                  onDelete?.(project)
+                }}
+                className={cn(
+                  "flex w-full items-center gap-2 px-3 py-2 text-xs text-error",
+                  "transition-colors hover:bg-subtle"
+                )}
+              >
+                <Trash2 className="size-3.5" />
+                Delete
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Sidebar                                                                   */
+/* -------------------------------------------------------------------------- */
+
 export function ProjectSidebar({
   isOpen,
   onClose,
   onNewProject,
+  onRenameProject,
+  onDeleteProject,
 }: ProjectSidebarProps) {
   return (
     <>
@@ -87,13 +221,31 @@ export function ProjectSidebar({
           </div>
 
           {/* My Projects tab */}
-          <TabsContent value="my-projects" className="flex flex-1 flex-col">
-            <EmptyState label="My Projects" />
+          <TabsContent value="my-projects" className="flex flex-1 flex-col px-3 py-2 gap-0.5">
+            {MOCK_MY_PROJECTS.length > 0
+              ? MOCK_MY_PROJECTS.map((p) => (
+                  <ProjectItem
+                    key={p.id}
+                    project={p}
+                    onRename={onRenameProject}
+                    onDelete={onDeleteProject}
+                  />
+                ))
+              : <EmptyState label="My Projects" />}
           </TabsContent>
 
           {/* Shared tab */}
-          <TabsContent value="shared" className="flex flex-1 flex-col">
-            <EmptyState label="Shared" />
+          <TabsContent value="shared" className="flex flex-1 flex-col px-3 py-2 gap-0.5">
+            {MOCK_SHARED_PROJECTS.length > 0
+              ? MOCK_SHARED_PROJECTS.map((p) => (
+                  <ProjectItem
+                    key={p.id}
+                    project={p}
+                    onRename={onRenameProject}
+                    onDelete={onDeleteProject}
+                  />
+                ))
+              : <EmptyState label="Shared" />}
           </TabsContent>
         </Tabs>
 
