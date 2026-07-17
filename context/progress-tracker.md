@@ -15,6 +15,7 @@ Update this file whenever the current phase, active feature, or implementation s
 - 01-design-system — shadcn/ui setup, core components, lucide-react, cn() helper
 - 02-editor-chrome — Editor layout shell and navigation
 - 04-project-dialogs — Project dialogs, editor home, sidebar actions, and mobile improvements
+- 03-auth — Authentication and route protection
 
 ## In Progress
 
@@ -22,7 +23,7 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Next Up
 
-- 03-auth — Authentication and route protection
+- (none — see feature specs for upcoming work)
 
 ## Open Questions
 

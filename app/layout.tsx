@@ -1,5 +1,5 @@
-import { ClerkProvider, SignInButton, SignUpButton, Show, UserButton } from "@clerk/nextjs";
-import { shadcn } from "@clerk/ui/themes";
+import { ClerkProvider } from "@clerk/nextjs";
+import { dark } from "@clerk/ui/themes";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -29,20 +29,24 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
-        <ClerkProvider appearance={{ theme: shadcn }}>
-          <header className="flex items-center justify-between px-4 py-2 border-b">
-            <span className="font-semibold text-lg">Ghost AI</span>
-            <div className="flex items-center gap-2">
-              <Show when="signed-out">
-                <SignInButton />
-                <SignUpButton />
-              </Show>
-              <Show when="signed-in">
-                <UserButton />
-              </Show>
-            </div>
-          </header>
+      <body className="min-h-full flex flex-col bg-base">
+        <ClerkProvider
+          appearance={{
+            theme: dark,
+            variables: {
+              colorBackground: "var(--bg-base)",
+              colorForeground: "var(--text-primary)",
+              colorInput: "var(--bg-surface)",
+              colorInputForeground: "var(--text-primary)",
+              colorPrimary: "var(--accent-primary)",
+              colorPrimaryForeground: "var(--bg-base)",
+              colorDanger: "var(--state-error)",
+              colorNeutral: "var(--text-secondary)",
+              colorMuted: "var(--bg-subtle)",
+              colorMutedForeground: "var(--text-muted)",
+            },
+          }}
+        >
           {children}
         </ClerkProvider>
       </body>
