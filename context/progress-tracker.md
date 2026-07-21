@@ -19,6 +19,7 @@ Update this file whenever the current phase, active feature, or implementation s
 - 05-prisma — Prisma schema, data models, and cached client singleton
 - 06-project-apis — Project API routes (list, create, rename, delete)
 - 07-wire-editor-home — Wired editor home sidebar and dialogs to real project API
+- 08-editor-workspace-shell — Workspace shell with server-side access checks, navbar, sidebar, and canvas placeholder
 
 ## In Progress
 

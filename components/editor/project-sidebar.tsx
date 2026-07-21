@@ -18,6 +18,8 @@ interface ProjectSidebarProps {
   onClose: () => void
   ownedProjects: ProjectSummary[]
   sharedProjects: ProjectSummary[]
+  currentRoomId?: string
+  onSelectProject?: (id: string) => void
   onNewProject?: () => void
   onRenameProject?: (project: ProjectSummary) => void
   onDeleteProject?: (project: ProjectSummary) => void
@@ -56,10 +58,14 @@ function EmptyState({ label }: { label: string }) {
 
 function ProjectItem({
   project,
+  isActive,
+  onSelect,
   onRename,
   onDelete,
 }: {
   project: ProjectSummary
+  isActive?: boolean
+  onSelect?: (id: string) => void
   onRename?: (project: ProjectSummary) => void
   onDelete?: (project: ProjectSummary) => void
 }) {
@@ -79,13 +85,23 @@ function ProjectItem({
   }, [menuOpen])
 
   return (
-    <div
+    <button
+      type="button"
+      onClick={() => onSelect?.(project.id)}
       className={cn(
-        "group flex items-center justify-between rounded-xl px-3 py-2 transition-colors",
-        "hover:bg-subtle"
+        "group flex w-full items-center justify-between rounded-xl px-3 py-2 text-left transition-colors",
+        "hover:bg-subtle",
+        isActive && "bg-subtle ring-1 ring-inset ring-brand/30",
       )}
     >
-      <span className="truncate text-sm text-copy-secondary">{project.name}</span>
+      <span
+        className={cn(
+          "truncate text-sm",
+          isActive ? "text-copy-primary font-medium" : "text-copy-secondary",
+        )}
+      >
+        {project.name}
+      </span>
 
       {/* Actions — only for owned projects */}
       {project.owned && (
@@ -146,7 +162,7 @@ function ProjectItem({
           )}
         </div>
       )}
-    </div>
+    </button>
   )
 }
 
@@ -159,6 +175,8 @@ export function ProjectSidebar({
   onClose,
   ownedProjects,
   sharedProjects,
+  currentRoomId,
+  onSelectProject,
   onNewProject,
   onRenameProject,
   onDeleteProject,
@@ -216,6 +234,8 @@ export function ProjectSidebar({
                   <ProjectItem
                     key={p.id}
                     project={p}
+                    isActive={currentRoomId === p.id}
+                    onSelect={onSelectProject}
                     onRename={onRenameProject}
                     onDelete={onDeleteProject}
                   />
@@ -230,6 +250,8 @@ export function ProjectSidebar({
                   <ProjectItem
                     key={p.id}
                     project={p}
+                    isActive={currentRoomId === p.id}
+                    onSelect={onSelectProject}
                     onRename={onRenameProject}
                     onDelete={onDeleteProject}
                   />
