@@ -17,6 +17,7 @@ Update this file whenever the current phase, active feature, or implementation s
 - 03-auth — Authentication and route protection
 - 04-project-dialogs — Project dialogs, editor home, sidebar actions, and mobile improvements
 - 05-prisma — Prisma schema, data models, and cached client singleton
+- 06-project-apis — Project API routes (list, create, rename, delete)
 
 ## In Progress
 
