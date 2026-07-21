@@ -18,6 +18,7 @@ Update this file whenever the current phase, active feature, or implementation s
 - 04-project-dialogs — Project dialogs, editor home, sidebar actions, and mobile improvements
 - 05-prisma — Prisma schema, data models, and cached client singleton
 - 06-project-apis — Project API routes (list, create, rename, delete)
+- 07-wire-editor-home — Wired editor home sidebar and dialogs to real project API
 
 ## In Progress
 

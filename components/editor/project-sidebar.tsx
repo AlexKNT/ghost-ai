@@ -7,22 +7,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 
-import type { MockProject } from "@/components/editor/use-project-dialogs"
-
-/* -------------------------------------------------------------------------- */
-/*  Mock data                                                                 */
-/* -------------------------------------------------------------------------- */
-
-const MOCK_MY_PROJECTS: MockProject[] = [
-  { id: "1", name: "E-Commerce Platform", slug: "e-commerce-platform", owned: true },
-  { id: "2", name: "Microservices Backend", slug: "microservices-backend", owned: true },
-  { id: "3", name: "Design System", slug: "design-system", owned: false },
-]
-
-const MOCK_SHARED_PROJECTS: MockProject[] = [
-  { id: "4", name: "Mobile App Redesign", slug: "mobile-app-redesign", owned: false },
-  { id: "5", name: "Analytics Pipeline", slug: "analytics-pipeline", owned: false },
-]
+import type { ProjectSummary } from "@/hooks/useProjectActions"
 
 /* -------------------------------------------------------------------------- */
 /*  Types                                                                     */
@@ -31,9 +16,11 @@ const MOCK_SHARED_PROJECTS: MockProject[] = [
 interface ProjectSidebarProps {
   isOpen: boolean
   onClose: () => void
+  ownedProjects: ProjectSummary[]
+  sharedProjects: ProjectSummary[]
   onNewProject?: () => void
-  onRenameProject?: (project: MockProject) => void
-  onDeleteProject?: (project: MockProject) => void
+  onRenameProject?: (project: ProjectSummary) => void
+  onDeleteProject?: (project: ProjectSummary) => void
 }
 
 /* -------------------------------------------------------------------------- */
@@ -72,9 +59,9 @@ function ProjectItem({
   onRename,
   onDelete,
 }: {
-  project: MockProject
-  onRename?: (project: MockProject) => void
-  onDelete?: (project: MockProject) => void
+  project: ProjectSummary
+  onRename?: (project: ProjectSummary) => void
+  onDelete?: (project: ProjectSummary) => void
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -170,6 +157,8 @@ function ProjectItem({
 export function ProjectSidebar({
   isOpen,
   onClose,
+  ownedProjects,
+  sharedProjects,
   onNewProject,
   onRenameProject,
   onDeleteProject,
@@ -222,8 +211,8 @@ export function ProjectSidebar({
 
           {/* My Projects tab */}
           <TabsContent value="my-projects" className="flex flex-1 flex-col px-3 py-2 gap-0.5">
-            {MOCK_MY_PROJECTS.length > 0
-              ? MOCK_MY_PROJECTS.map((p) => (
+            {ownedProjects.length > 0
+              ? ownedProjects.map((p) => (
                   <ProjectItem
                     key={p.id}
                     project={p}
@@ -236,8 +225,8 @@ export function ProjectSidebar({
 
           {/* Shared tab */}
           <TabsContent value="shared" className="flex flex-1 flex-col px-3 py-2 gap-0.5">
-            {MOCK_SHARED_PROJECTS.length > 0
-              ? MOCK_SHARED_PROJECTS.map((p) => (
+            {sharedProjects.length > 0
+              ? sharedProjects.map((p) => (
                   <ProjectItem
                     key={p.id}
                     project={p}

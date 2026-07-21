@@ -15,7 +15,7 @@ import {
   DialogPatternFooter,
 } from "@/components/editor/dialog-pattern"
 
-import type { MockProject } from "@/components/editor/use-project-dialogs"
+import type { ProjectSummary } from "@/hooks/useProjectActions"
 
 /* -------------------------------------------------------------------------- */
 /*  Create Project Dialog                                                     */
@@ -118,7 +118,7 @@ function CreateProjectDialog({
 
 interface RenameProjectDialogProps {
   open: boolean
-  project: MockProject | null
+  project: ProjectSummary | null
   name: string
   slug: string
   loading: boolean
@@ -216,7 +216,7 @@ function RenameProjectDialog({
 
 interface DeleteProjectDialogProps {
   open: boolean
-  project: MockProject | null
+  project: ProjectSummary | null
   loading: boolean
   onSubmit: () => void
   onClose: () => void

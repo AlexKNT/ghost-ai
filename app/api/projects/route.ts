@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let body: { name?: string; description?: string };
+  let body: { name?: string; description?: string; id?: string };
   try {
     body = await request.json();
   } catch {
@@ -33,6 +33,7 @@ export async function POST(request: Request) {
 
   const project = await prisma.project.create({
     data: {
+      id: body.id || undefined,
       ownerId: userId,
       name,
       description,
