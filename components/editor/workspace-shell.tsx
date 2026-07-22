@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { WorkspaceNavbar } from "@/components/editor/workspace-navbar"
 import { ProjectSidebar } from "@/components/editor/project-sidebar"
+import { ShareDialog } from "@/components/editor/share-dialog"
 
 import type { ProjectSummary } from "@/hooks/useProjectActions"
 
@@ -16,6 +17,7 @@ import type { ProjectSummary } from "@/hooks/useProjectActions"
 interface WorkspaceShellProps {
   projectId: string
   projectName: string
+  isOwner: boolean
   ownedProjects: ProjectSummary[]
   sharedProjects: ProjectSummary[]
 }
@@ -27,6 +29,7 @@ interface WorkspaceShellProps {
 export function WorkspaceShell({
   projectId,
   projectName,
+  isOwner,
   ownedProjects,
   sharedProjects,
 }: WorkspaceShellProps) {
@@ -34,6 +37,7 @@ export function WorkspaceShell({
 
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [aiPanelOpen, setAiPanelOpen] = useState(false)
+  const [shareOpen, setShareOpen] = useState(false)
 
   const toggleSidebar = useCallback(() => setSidebarOpen((prev) => !prev), [])
   const closeSidebar = useCallback(() => setSidebarOpen(false), [])
@@ -57,6 +61,14 @@ export function WorkspaceShell({
         aiPanelOpen={aiPanelOpen}
         onToggleSidebar={toggleSidebar}
         onToggleAiPanel={toggleAiPanel}
+        onOpenShare={() => setShareOpen(true)}
+      />
+
+      <ShareDialog
+        open={shareOpen}
+        projectId={projectId}
+        isOwner={isOwner}
+        onClose={() => setShareOpen(false)}
       />
 
       <ProjectSidebar

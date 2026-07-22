@@ -20,6 +20,7 @@ interface WorkspaceNavbarProps {
   aiPanelOpen: boolean
   onToggleSidebar: () => void
   onToggleAiPanel: () => void
+  onOpenShare: () => void
 }
 
 /* -------------------------------------------------------------------------- */
@@ -32,6 +33,7 @@ export function WorkspaceNavbar({
   aiPanelOpen,
   onToggleSidebar,
   onToggleAiPanel,
+  onOpenShare,
 }: WorkspaceNavbarProps) {
   return (
     <nav
@@ -69,9 +71,10 @@ export function WorkspaceNavbar({
 
       {/* Right section — actions + user */}
       <div className="flex items-center gap-1 px-3">
-        {/* Share button — placeholder */}
+        {/* Share button */}
         <button
           type="button"
+          onClick={onOpenShare}
           className={cn(
             "inline-flex size-8 items-center justify-center rounded-xl",
             "text-copy-muted transition-colors",

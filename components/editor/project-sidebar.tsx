@@ -85,9 +85,16 @@ function ProjectItem({
   }, [menuOpen])
 
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={() => onSelect?.(project.id)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault()
+          onSelect?.(project.id)
+        }
+      }}
       className={cn(
         "group flex w-full items-center justify-between rounded-xl px-3 py-2 text-left transition-colors",
         "hover:bg-subtle",
@@ -162,7 +169,7 @@ function ProjectItem({
           )}
         </div>
       )}
-    </button>
+    </div>
   )
 }
 

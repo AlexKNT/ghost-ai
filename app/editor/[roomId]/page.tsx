@@ -68,10 +68,13 @@ export default async function EditorRoomPage({ params }: EditorRoomPageProps) {
     owned: false,
   }))
 
+  const isOwner = project.ownerId === userId
+
   return (
     <WorkspaceShell
       projectId={project.id}
       projectName={project.name}
+      isOwner={isOwner}
       ownedProjects={ownedProjects}
       sharedProjects={sharedProjects}
     />
