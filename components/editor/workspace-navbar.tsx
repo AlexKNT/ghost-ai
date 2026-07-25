@@ -5,10 +5,12 @@ import {
   PanelLeftClose,
   Share2,
   MessageSquare,
+  Save,
 } from "lucide-react"
 import { UserButton } from "@clerk/nextjs"
 
 import { cn } from "@/lib/utils"
+import type { SaveStatus } from "@/hooks/useCanvasAutosave"
 
 /* -------------------------------------------------------------------------- */
 /*  Types                                                                     */
@@ -18,9 +20,22 @@ interface WorkspaceNavbarProps {
   projectName: string
   sidebarOpen: boolean
   aiPanelOpen: boolean
+  saveStatus: SaveStatus
   onToggleSidebar: () => void
   onToggleAiPanel: () => void
   onOpenShare: () => void
+  onSave: () => void
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Save button label                                                         */
+/* -------------------------------------------------------------------------- */
+
+const saveLabel: Record<SaveStatus, string> = {
+  idle: "Save",
+  saving: "Saving...",
+  saved: "Saved",
+  error: "Error",
 }
 
 /* -------------------------------------------------------------------------- */
@@ -31,9 +46,11 @@ export function WorkspaceNavbar({
   projectName,
   sidebarOpen,
   aiPanelOpen,
+  saveStatus,
   onToggleSidebar,
   onToggleAiPanel,
   onOpenShare,
+  onSave,
 }: WorkspaceNavbarProps) {
   return (
     <nav
@@ -71,6 +88,24 @@ export function WorkspaceNavbar({
 
       {/* Right section — actions + user */}
       <div className="flex items-center gap-1 px-3">
+        {/* Save button */}
+        <button
+          type="button"
+          onClick={onSave}
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition-colors",
+            saveStatus === "error"
+              ? "bg-error/10 text-error"
+              : saveStatus === "saved"
+                ? "bg-success/10 text-success"
+                : "text-copy-muted hover:bg-subtle hover:text-copy-primary",
+          )}
+          aria-label="Save canvas"
+        >
+          <Save className="size-3.5" />
+          {saveLabel[saveStatus]}
+        </button>
+
         {/* Share button */}
         <button
           type="button"

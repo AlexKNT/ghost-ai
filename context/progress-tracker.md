@@ -21,6 +21,13 @@ Update this file whenever the current phase, active feature, or implementation s
 - 07-wire-editor-home — Wired editor home sidebar and dialogs to real project API
 - 08-editor-workspace-shell — Workspace shell with server-side access checks, navbar, sidebar, and canvas placeholder
 - 09-share-dialog — Share dialog with collaborator management via Clerk
+- 10-liveblocks-setup — Liveblocks config, cached node client, auth route with project access verification
+- 11-base-canvas — React Flow canvas with dotted background, minimap, collaborative-ready foundation
+- 12-shape-panel — Floating shape panel with drag-and-drop onto canvas (rectangle, diamond, circle, pill, cylinder, hexagon)
+- 13-node-shape — Custom node renderer with all 6 shape types (CSS + SVG), 4 connection handles per node
+- 15-node-color-toolbar — (skip for now, uses default color palette)
+- 16-edge-behavior — Connection handles on all 4 sides, edge creation with arrow markers
+- 21-canvas-autosave — Canvas save/load API routes (Vercel Blob), autosave hook, Save button in workspace navbar
 
 ## In Progress
 

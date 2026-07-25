@@ -1,12 +1,14 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 
 import { cn } from "@/lib/utils"
 import { WorkspaceNavbar } from "@/components/editor/workspace-navbar"
 import { ProjectSidebar } from "@/components/editor/project-sidebar"
 import { ShareDialog } from "@/components/editor/share-dialog"
+import { CanvasWrapper } from "@/components/editor/canvas-wrapper"
+import type { SaveStatus } from "@/hooks/useCanvasAutosave"
 
 import type { ProjectSummary } from "@/hooks/useProjectActions"
 
@@ -38,6 +40,8 @@ export function WorkspaceShell({
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [aiPanelOpen, setAiPanelOpen] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle")
+  const saveTriggerRef = useRef<(() => void) | null>(null)
 
   const toggleSidebar = useCallback(() => setSidebarOpen((prev) => !prev), [])
   const closeSidebar = useCallback(() => setSidebarOpen(false), [])
@@ -53,15 +57,21 @@ export function WorkspaceShell({
     [projectId, router, closeSidebar],
   )
 
+  const handleManualSave = useCallback(() => {
+    saveTriggerRef.current?.()
+  }, [])
+
   return (
-    <div className="flex h-screen flex-col bg-base">
+    <div className="flex h-screen flex-col bg-base overflow-hidden">
       <WorkspaceNavbar
         projectName={projectName}
         sidebarOpen={sidebarOpen}
         aiPanelOpen={aiPanelOpen}
+        saveStatus={saveStatus}
         onToggleSidebar={toggleSidebar}
         onToggleAiPanel={toggleAiPanel}
         onOpenShare={() => setShareOpen(true)}
+        onSave={handleManualSave}
       />
 
       <ShareDialog
@@ -71,6 +81,7 @@ export function WorkspaceShell({
         onClose={() => setShareOpen(false)}
       />
 
+      {/* Left sidebar — floats over canvas */}
       <ProjectSidebar
         isOpen={sidebarOpen}
         onClose={closeSidebar}
@@ -80,31 +91,13 @@ export function WorkspaceShell({
         onSelectProject={handleSelectProject}
       />
 
-      {/* Central canvas placeholder */}
-      <main
-        className={cn(
-          "flex flex-1 items-center justify-center pt-14",
-          "bg-[#1a1a2e]",
-        )}
-      >
-        <div className="flex flex-col items-center gap-3 text-center max-w-sm px-6">
-          <div className="flex size-14 items-center justify-center rounded-2xl bg-white/5">
-            <svg
-              className="size-7 text-white/20"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={1.5}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25"
-              />
-            </svg>
-          </div>
-          <p className="text-sm text-white/30">Canvas coming soon</p>
-        </div>
+      {/* Central canvas — full viewport, sidebars float on top */}
+      <main className="flex-1 pt-14">
+        <CanvasWrapper
+          projectId={projectId}
+          onSaveStatusChange={setSaveStatus}
+          saveTriggerRef={saveTriggerRef}
+        />
       </main>
 
       {/* AI sidebar placeholder */}

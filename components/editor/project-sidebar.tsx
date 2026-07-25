@@ -205,7 +205,9 @@ export function ProjectSidebar({
           "fixed top-14 left-0 bottom-0 z-30 flex w-72 flex-col",
           "bg-surface border-r border-border",
           "transition-transform duration-300 ease-out",
-          isOpen ? "translate-x-0" : "-translate-x-full"
+          isOpen
+            ? "translate-x-0"
+            : "-translate-x-[calc(100%+2px)]",
         )}
       >
         {/* Header */}
