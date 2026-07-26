@@ -2,6 +2,14 @@
     "chat.tools.terminal.autoApprove": {
         "npx prisma": true,
         "Get-Service": true,
-        "psql": true
+        "psql": true,
+        "/^npx next build 2>&1$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^npx eslint components/editor/canvas-wrapper\\.tsx 2>&1$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
     }
 }

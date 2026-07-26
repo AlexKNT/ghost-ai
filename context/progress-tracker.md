@@ -22,7 +22,7 @@ Update this file whenever the current phase, active feature, or implementation s
 - 08-editor-workspace-shell — Workspace shell with server-side access checks, navbar, sidebar, and canvas placeholder
 - 09-share-dialog — Share dialog with collaborator management via Clerk
 - 10-liveblocks-setup — Liveblocks config, cached node client, auth route with project access verification
-- 11-base-canvas — React Flow canvas with dotted background, minimap, collaborative-ready foundation
+- 11-base-canvas — React Flow canvas with Liveblocks-backed real-time sync via `useLiveblocksFlow`, dotted background, minimap, `<Cursors />`, and collaborative-ready foundation
 - 12-shape-panel — Floating shape panel with drag-and-drop onto canvas (rectangle, diamond, circle, pill, cylinder, hexagon)
 - 13-node-shape — Custom node renderer with all 6 shape types (CSS + SVG), 4 connection handles per node
 - 15-node-color-toolbar — (skip for now, uses default color palette)
@@ -47,4 +47,4 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Session Notes
 
-- Add context needed to resume work in the next session.
+- 2026-07-26: Refactored `canvas-wrapper.tsx` to properly integrate Liveblocks real-time collaboration. Replaced local `useNodesState`/`useEdgesState` with `useLiveblocksFlow` from `@liveblocks/react-flow`. Added `LiveblocksProvider` → `RoomProvider` → `ErrorBoundary` → `ClientSideSuspense` → `ReactFlowProvider` hierarchy. Added `<Cursors />` for presence. Drag-and-drop node creation now uses `onNodesChange([{ type: "add", item: node }])`. Removed custom keyboard delete handler (React Flow handles deletion natively through `useLiveblocksFlow`). Removed custom `onConnect` wrapper (styling via `defaultEdgeOptions`). Installed `@liveblocks/react-flow` and `react-error-boundary`. Build passes.

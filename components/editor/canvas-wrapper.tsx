@@ -7,14 +7,20 @@ import {
   Background,
   BackgroundVariant,
   MiniMap,
-  useNodesState,
-  useEdgesState,
   useReactFlow,
   type Node,
   type Edge,
-  type Connection,
 } from "@xyflow/react"
 import "@xyflow/react/dist/style.css"
+import "@liveblocks/react-flow/styles.css"
+
+import {
+  LiveblocksProvider,
+  RoomProvider,
+  ClientSideSuspense,
+} from "@liveblocks/react"
+import { ErrorBoundary } from "react-error-boundary"
+import { useLiveblocksFlow, Cursors } from "@liveblocks/react-flow"
 
 import { useShapeDrop } from "@/hooks/useShapeDrop"
 import { useCanvasAutosave, type SaveStatus } from "@/hooks/useCanvasAutosave"
@@ -29,15 +35,35 @@ import { DEFAULT_NODE_COLOR } from "@/types/canvas"
 const nodeTypes = { canvasNode: CanvasNode }
 
 /* -------------------------------------------------------------------------- */
-/*  Helpers                                                                   */
+/*  Fallback components                                                       */
 /* -------------------------------------------------------------------------- */
 
-function generateEdgeId(): string {
-  return `edge-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+function CanvasLoading() {
+  return (
+    <div className="flex h-full w-full items-center justify-center bg-[#080809]">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-surface-border border-t-brand" />
+    </div>
+  )
+}
+
+function CanvasError() {
+  return (
+    <div className="flex h-full w-full items-center justify-center bg-[#080809]">
+      <div className="text-center">
+        <p className="text-lg font-semibold text-copy-primary">
+          Connection lost
+        </p>
+        <p className="mt-2 text-sm text-copy-secondary">
+          Unable to connect to the collaboration server. Please refresh the
+          page.
+        </p>
+      </div>
+    </div>
+  )
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Inner canvas (needs ReactFlowProvider context)                            */
+/*  Inner canvas (needs Liveblocks + ReactFlow context)                       */
 /* -------------------------------------------------------------------------- */
 
 interface CanvasInnerProps {
@@ -51,8 +77,12 @@ function CanvasInner({
   onSaveStatusChange,
   saveTriggerRef,
 }: CanvasInnerProps) {
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
+  const { nodes, edges, onNodesChange, onEdgesChange, onConnect, onDelete } =
+    useLiveblocksFlow<Node, Edge>({
+      suspense: true,
+      nodes: { initial: [] },
+      edges: { initial: [] },
+    })
 
   const { screenToFlowPosition } = useReactFlow()
   const { onDragStart, createNodeFromDrop } = useShapeDrop()
@@ -71,7 +101,9 @@ function CanvasInner({
 
   // Expose save function to parent via ref
   const saveRef = useRef(save)
-  saveRef.current = save
+  useEffect(() => {
+    saveRef.current = save
+  }, [save])
   useEffect(() => {
     saveTriggerRef.current = () => saveRef.current()
     return () => {
@@ -89,29 +121,6 @@ function CanvasInner({
     scheduleSave()
   }, [nodes, edges, scheduleSave])
 
-  /* ---- connections ------------------------------------------------------- */
-
-  const onConnect = useCallback(
-    (connection: Connection) => {
-      const newEdge: Edge = {
-        id: generateEdgeId(),
-        source: connection.source,
-        target: connection.target,
-        sourceHandle: connection.sourceHandle ?? undefined,
-        targetHandle: connection.targetHandle ?? undefined,
-        type: "default",
-        data: { label: "" },
-        style: {
-          stroke: "#f8fafc",
-          strokeWidth: 1.5,
-        },
-        markerEnd: { type: "arrowclosed", color: "#f8fafc" },
-      }
-      setEdges((eds) => [...eds, newEdge])
-    },
-    [setEdges],
-  )
-
   /* ---- drag and drop ----------------------------------------------------- */
 
   const onDragOver = useCallback((event: React.DragEvent) => {
@@ -123,31 +132,12 @@ function CanvasInner({
     (event: React.DragEvent) => {
       const node = createNodeFromDrop(event, screenToFlowPosition)
       if (node) {
-        setNodes((nds) => [...nds, node])
+        // Add node through the onNodesChange handler provided by useLiveblocksFlow
+        onNodesChange([{ type: "add", item: node }])
       }
     },
-    [createNodeFromDrop, screenToFlowPosition, setNodes],
+    [createNodeFromDrop, screenToFlowPosition, onNodesChange],
   )
-
-  /* ---- keyboard: delete selected nodes & edges --------------------------- */
-
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key !== "Delete" && e.key !== "Backspace") return
-
-      const target = e.target as HTMLElement
-      const tag = target.tagName.toLowerCase()
-      if (tag === "input" || tag === "textarea" || target.isContentEditable) {
-        return
-      }
-
-      setNodes((nds) => nds.filter((n) => !n.selected))
-      setEdges((eds) => eds.filter((e) => !e.selected))
-    }
-
-    window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [setNodes, setEdges])
 
   /* ---- minimap style ----------------------------------------------------- */
 
@@ -171,11 +161,11 @@ function CanvasInner({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onDelete={onDelete}
         onDragOver={onDragOver}
         onDrop={onDrop}
         nodeTypes={nodeTypes}
         fitView
-        deleteKeyCode={null}
         connectionLineStyle={{
           stroke: "#f8fafc",
           strokeWidth: 1.5,
@@ -197,6 +187,7 @@ function CanvasInner({
           nodeColor={DEFAULT_NODE_COLOR.fill}
           maskColor="rgba(8,8,9,0.7)"
         />
+        <Cursors />
       </ReactFlow>
 
       {/* Shape panel — floating over canvas */}
@@ -206,7 +197,7 @@ function CanvasInner({
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Canvas wrapper (provides ReactFlow context)                               */
+/*  Canvas wrapper (provides Liveblocks + ReactFlow context)                  */
 /* -------------------------------------------------------------------------- */
 
 interface CanvasWrapperProps {
@@ -223,12 +214,23 @@ export function CanvasWrapper({
   saveTriggerRef,
 }: CanvasWrapperProps) {
   return (
-    <ReactFlowProvider>
-      <CanvasInner
-        projectId={projectId}
-        onSaveStatusChange={onSaveStatusChange ?? (() => {})}
-        saveTriggerRef={saveTriggerRef ?? noopRef}
-      />
-    </ReactFlowProvider>
+    <LiveblocksProvider authEndpoint="/api/liveblocks-auth">
+      <RoomProvider
+        id={projectId}
+        initialPresence={{ cursor: null, isThinking: false }}
+      >
+        <ErrorBoundary fallback={<CanvasError />}>
+          <ClientSideSuspense fallback={<CanvasLoading />}>
+            <ReactFlowProvider>
+              <CanvasInner
+                projectId={projectId}
+                onSaveStatusChange={onSaveStatusChange ?? (() => {})}
+                saveTriggerRef={saveTriggerRef ?? noopRef}
+              />
+            </ReactFlowProvider>
+          </ClientSideSuspense>
+        </ErrorBoundary>
+      </RoomProvider>
+    </LiveblocksProvider>
   )
 }
