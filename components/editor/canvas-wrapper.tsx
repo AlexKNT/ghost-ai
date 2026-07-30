@@ -25,6 +25,7 @@ import { useLiveblocksFlow, Cursors } from "@liveblocks/react-flow"
 import { useShapeDrop } from "@/hooks/useShapeDrop"
 import { useCanvasAutosave, type SaveStatus } from "@/hooks/useCanvasAutosave"
 import { CanvasNode } from "@/components/editor/canvas-node"
+import { CanvasEdge } from "@/components/editor/canvas-edge"
 import { ShapePanel } from "@/components/editor/shape-panel"
 import { DEFAULT_NODE_COLOR } from "@/types/canvas"
 
@@ -33,6 +34,7 @@ import { DEFAULT_NODE_COLOR } from "@/types/canvas"
 /* -------------------------------------------------------------------------- */
 
 const nodeTypes = { canvasNode: CanvasNode }
+const edgeTypes = { canvasEdge: CanvasEdge }
 
 /* -------------------------------------------------------------------------- */
 /*  Fallback components                                                       */
@@ -165,12 +167,14 @@ function CanvasInner({
         onDragOver={onDragOver}
         onDrop={onDrop}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         fitView
         connectionLineStyle={{
           stroke: "#f8fafc",
           strokeWidth: 1.5,
         }}
         defaultEdgeOptions={{
+          type: "canvasEdge",
           style: { stroke: "#f8fafc", strokeWidth: 1.5 },
           markerEnd: { type: "arrowclosed", color: "#f8fafc" },
         }}

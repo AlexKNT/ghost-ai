@@ -26,7 +26,7 @@ Update this file whenever the current phase, active feature, or implementation s
 - 12-shape-panel — Floating shape panel with drag-and-drop onto canvas (rectangle, diamond, circle, pill, cylinder, hexagon)
 - 13-node-shape — Custom node renderer with all 6 shape types (CSS + SVG), 4 connection handles per node
 - 15-node-color-toolbar — Floating color swatch toolbar above selected nodes, updates node background/text from 8 predefined pairs via `updateNodeData`
-- 16-edge-behavior — Connection handles on all 4 sides, edge creation with arrow markers
+- 16-edge-behavior — Custom `CanvasEdge` with smooth-step routing, dim/bright states, 20px invisible click area, inline label editing via `EdgeLabelRenderer` (double-click to edit, pill badge display, faint placeholder when empty), arrow markers, registered as `canvasEdge` type
 - 21-canvas-autosave — Canvas save/load API routes (Vercel Blob), autosave hook, Save button in workspace navbar
 
 ## In Progress
@@ -52,6 +52,7 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Session Notes
 
+- 2026-07-30 (feature 16): Implemented custom edge renderer and inline label editing. Created `CanvasEdge` component using `getSmoothStepPath` for clean right-angle routing, `BaseEdge` for rendering (visible path + invisible 20px-wide click area), and `EdgeLabelRenderer` for label positioning at path midpoint. Labels: double-click to edit, pill badge display when saved, faint "Edge label" placeholder when empty, commit on blur/Enter, cancel on Escape. Edges dim at rest (35% opacity) and brighten on selection (85%). Registered as `canvasEdge` type in `canvas-wrapper.tsx` with `defaultEdgeOptions.type`. Arrow markers preserved. `onPointerDown` stops propagation on label to prevent canvas interactions. Build passes.
 - 2026-07-30 (feature 15): Implemented floating node color toolbar. Created `NodeColorToolbar` component — appears above selected nodes, shows 8 circular swatches from `NODE_COLORS`. Active swatch gets a colored border + subtle glow matching its text color. Hover scales swatch to 110%. Clicks call `updateNodeData` to sync through Liveblocks. `onPointerDown` stops propagation to prevent canvas drag. Integrated into `canvas-node.tsx` conditional on `selected`. Build passes.
 - 2026-07-30 (feature 14): Added resize handles and inline label editing to canvas nodes. `NodeResizer` from `@xyflow/react` provides corner handles on selected nodes with min dimensions 80×60 and subtle white/dark styling. Double-clicking a node label enters inline edit mode with a centered `<textarea>`, commits on blur, cancels on Escape. `updateNodeData` syncs label changes through Liveblocks. `onPointerDown` on the textarea stops propagation to prevent canvas drag/pan during editing. Empty labels show a "Label" placeholder. Build passes.
 - 2026-07-30 (feature 13): Added drag ghost preview for shape panel. When dragging a shape from the panel, a scaled canvas-drawn preview of the actual shape (not the icon) now follows the cursor via `setDragImage`. All 6 shapes are rendered on an offscreen canvas using Canvas 2D API matching the node renderer shapes. Cleaned up `ShapeDragPayload` — removed unused `offsetX`/`offsetY` fields. Build passes.
