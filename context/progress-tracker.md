@@ -4,11 +4,11 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Current Phase
 
-- Phase 1: Foundation — Design System & UI Primitives
+- Phase 2: Canvas & Collaboration — Real-time canvas, node editing, presence, autosave
 
 ## Current Goal
 
-- Build project dialogs (create, rename, delete), editor home screen, and sidebar project actions with mock data.
+- Complete canvas ergonomics (feature 17), then proceed through starter templates, presence, AI sidebar, and AI integration. All foundation features (auth, projects, canvas, shapes, edges, autosave) are in place.
 
 ## Completed
 
@@ -31,11 +31,16 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## In Progress
 
-- None yet.
+- None.
 
 ## Next Up
 
-- (none — see feature specs for upcoming work)
+- 17-canvas-ergonomics — Canvas pan/zoom ergonomics, keyboard shortcuts, and viewport controls
+- 18-starter-templates — Prebuilt system design templates that users can import
+- 19-presence-avatars-cursors — Live avatars, presence indicators, and collaborative cursors
+- 20-ai-sidebar-shell — Slide-over AI sidebar with tab navigation
+- 22-design-agent-api — AI design generation API route and Trigger.dev task
+- 23-design-agent-logic — AI generation logic: prompt → structured canvas updates
 
 ## Open Questions
 
@@ -47,4 +52,5 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Session Notes
 
+- 2026-07-30: Verified feature 12-shape-panel implementation — all requirements met. Fixed `useShapeDrop.ts` to use the exported `SHAPE_DRAG_DATA_FORMAT` constant instead of hardcoded string literal. Updated progress tracker: Phase → Phase 2 (Canvas & Collaboration), populated Next Up with upcoming features 17-23. Build passes cleanly.
 - 2026-07-26: Refactored `canvas-wrapper.tsx` to properly integrate Liveblocks real-time collaboration. Replaced local `useNodesState`/`useEdgesState` with `useLiveblocksFlow` from `@liveblocks/react-flow`. Added `LiveblocksProvider` → `RoomProvider` → `ErrorBoundary` → `ClientSideSuspense` → `ReactFlowProvider` hierarchy. Added `<Cursors />` for presence. Drag-and-drop node creation now uses `onNodesChange([{ type: "add", item: node }])`. Removed custom keyboard delete handler (React Flow handles deletion natively through `useLiveblocksFlow`). Removed custom `onConnect` wrapper (styling via `defaultEdgeOptions`). Installed `@liveblocks/react-flow` and `react-error-boundary`. Build passes.

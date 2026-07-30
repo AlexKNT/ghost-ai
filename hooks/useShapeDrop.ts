@@ -3,7 +3,11 @@
 import { useCallback } from "react"
 import type { Node } from "@xyflow/react"
 
-import { NODE_SHAPES, DEFAULT_NODE_COLOR } from "@/types/canvas"
+import {
+  NODE_SHAPES,
+  DEFAULT_NODE_COLOR,
+  SHAPE_DRAG_DATA_FORMAT,
+} from "@/types/canvas"
 import type { NodeShape, ShapeDragPayload } from "@/types/canvas"
 
 /* -------------------------------------------------------------------------- */
@@ -42,7 +46,7 @@ export function useShapeDrop() {
       }
 
       event.dataTransfer.setData(
-        "application/ghost-shape",
+        SHAPE_DRAG_DATA_FORMAT,
         JSON.stringify(payload),
       )
       event.dataTransfer.effectAllowed = "move"
@@ -60,7 +64,7 @@ export function useShapeDrop() {
         y: number
       },
     ): Node | null => {
-      const raw = event.dataTransfer.getData("application/ghost-shape")
+      const raw = event.dataTransfer.getData(SHAPE_DRAG_DATA_FORMAT)
       if (!raw) return null
 
       const payload: ShapeDragPayload = JSON.parse(raw)
