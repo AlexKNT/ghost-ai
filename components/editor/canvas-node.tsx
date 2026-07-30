@@ -5,6 +5,7 @@ import { Handle, Position, NodeResizer, useReactFlow, type NodeProps } from "@xy
 
 import { cn } from "@/lib/utils"
 import type { CanvasNodeData } from "@/types/canvas"
+import { NodeColorToolbar } from "@/components/editor/node-color-toolbar"
 
 /* -------------------------------------------------------------------------- */
 /*  Shape Renderers                                                           */
@@ -311,6 +312,18 @@ function CanvasNodeComponent({ id, data, selected }: NodeProps) {
     [cancelEdit, commitEdit],
   )
 
+  /* ---- color change ------------------------------------------------------ */
+
+  const handleColorChange = useCallback(
+    (fill: string, text: string) => {
+      updateNodeData(id, {
+        color: fill,
+        textColor: text,
+      } as Partial<CanvasNodeData>)
+    },
+    [id, updateNodeData],
+  )
+
   /* ---- shape renderer ---------------------------------------------------- */
 
   const shapeEl = (() => {
@@ -401,6 +414,15 @@ function CanvasNodeComponent({ id, data, selected }: NodeProps) {
             border: "2px solid #1a1a2e",
           }}
           lineStyle={{ borderColor: "rgba(255,255,255,0.2)" }}
+        />
+      )}
+
+      {/* Color toolbar — visible when selected */}
+      {selected && (
+        <NodeColorToolbar
+          nodeId={id}
+          currentColor={color}
+          onColorChange={handleColorChange}
         />
       )}
 
