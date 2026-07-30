@@ -227,6 +227,7 @@ function CanvasInner({
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onDelete={onDelete}
+        deleteKeyCode={["Delete", "Backspace"]}
         onDragOver={onDragOver}
         onDrop={onDrop}
         onMouseMove={onMouseMove}
@@ -265,7 +266,7 @@ function CanvasInner({
       {/* Shape panel — floating over canvas */}
       <ShapePanel onDragStart={onDragStart} />
 
-      {/* Canvas controls — zoom, undo/redo */}
+      {/* Canvas controls — zoom, undo/redo, delete */}
       <CanvasControls />
     </div>
   )

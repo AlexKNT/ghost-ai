@@ -3,7 +3,7 @@
 import { memo, useCallback } from "react"
 import { useReactFlow } from "@xyflow/react"
 import { useUndo, useRedo, useCanUndo, useCanRedo } from "@liveblocks/react"
-import { ZoomIn, ZoomOut, Maximize2, Undo2, Redo2 } from "lucide-react"
+import { ZoomIn, ZoomOut, Maximize2, Undo2, Redo2, Trash2 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts"
@@ -133,6 +133,31 @@ function CanvasControlsComponent() {
         title="Redo (Ctrl+Shift+Z)"
       >
         <Redo2 className="size-4" />
+      </button>
+
+      {/* Divider */}
+      <div className="mx-1 h-5 w-px bg-white/10" />
+
+      {/* Delete */}
+      <button
+        type="button"
+        onClick={() => {
+          if (!rfInstance) return
+          const selectedNodes = rfInstance.getNodes().filter((n) => n.selected)
+          const selectedEdges = rfInstance.getEdges().filter((e) => e.selected)
+          if (selectedNodes.length > 0 || selectedEdges.length > 0) {
+            rfInstance.deleteElements({ nodes: selectedNodes, edges: selectedEdges })
+          }
+        }}
+        className={cn(
+          "inline-flex size-8 items-center justify-center rounded-xl",
+          "text-white/50 transition-colors",
+          "hover:bg-red-500/20 hover:text-red-400",
+        )}
+        aria-label="Delete selected"
+        title="Delete selected (Del or Backspace)"
+      >
+        <Trash2 className="size-4" />
       </button>
     </div>
   )

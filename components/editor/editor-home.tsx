@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useCallback } from "react"
+import { useRouter } from "next/navigation"
 import { Plus, FolderOpen } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -29,12 +30,21 @@ interface EditorHomeProps {
 /* -------------------------------------------------------------------------- */
 
 export function EditorHome({ ownedProjects, sharedProjects }: EditorHomeProps) {
+  const router = useRouter()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const actions = useProjectActions()
 
   const toggleSidebar = useCallback(() => setSidebarOpen((prev) => !prev), [])
   const closeSidebar = useCallback(() => setSidebarOpen(false), [])
+
+  const handleSelectProject = useCallback(
+    (id: string) => {
+      router.push(`/editor/${id}`)
+      closeSidebar()
+    },
+    [router, closeSidebar],
+  )
 
   /* ---- render ------------------------------------------------------------ */
 
@@ -47,6 +57,7 @@ export function EditorHome({ ownedProjects, sharedProjects }: EditorHomeProps) {
         onClose={closeSidebar}
         ownedProjects={ownedProjects}
         sharedProjects={sharedProjects}
+        onSelectProject={handleSelectProject}
         onNewProject={actions.openCreate}
         onRenameProject={actions.openRename}
         onDeleteProject={actions.openDelete}
