@@ -6,7 +6,7 @@ import type { LiveList, LiveObject } from "@liveblocks/client"
 
 export type Presence = {
   cursor: { x: number; y: number } | null
-  isThinking: boolean
+  thinking: boolean
 }
 
 /* -------------------------------------------------------------------------- */
@@ -18,6 +18,17 @@ export type UserMeta = {
   name: string
   avatar: string
   color: string
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Global type augmentation (for hook inference)                             */
+/* -------------------------------------------------------------------------- */
+
+declare global {
+  interface Liveblocks {
+    Presence: Presence
+    UserMeta: UserMeta
+  }
 }
 
 /* -------------------------------------------------------------------------- */

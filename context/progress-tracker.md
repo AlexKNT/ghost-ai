@@ -8,7 +8,7 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Current Goal
 
-- Complete presence (feature 19), then proceed through AI sidebar and AI integration. All foundation features (auth, projects, canvas, shapes, edges, autosave, templates) are in place.
+- Complete starter templates (feature 18), then proceed through AI sidebar and AI integration.
 
 ## Completed
 
@@ -30,6 +30,7 @@ Update this file whenever the current phase, active feature, or implementation s
 - 16-edge-behavior — Custom `CanvasEdge` with smooth-step routing, dim/bright states, 20px invisible click area, inline label editing via `EdgeLabelRenderer` (double-click to edit, pill badge display, faint placeholder when empty), arrow markers, registered as `canvasEdge` type
 - 21-canvas-autosave — Canvas save/load API routes (Vercel Blob), autosave hook, Save button in workspace navbar
 - 17.5-canvas-ergonomics — Floating zoom/undo/redo control bar (bottom-left), `useKeyboardShortcuts` hook (+/− zoom, Cmd+Z/Cmd+Shift+Z undo/redo), Liveblocks `useUndo`/`useRedo` wired with disabled states, skips shortcuts while editing text
+- 19-presence-avatars-cursors — Presence avatars in canvas top-right (collaborator avatars with Clerk UserButton, divider when collaborators present), live cursor broadcasting via `onMouseMove`/`onMouseLeave` on ReactFlow, `PresenceAvatars` component with avatar stack (max 5 + overflow), fallback initials, ring for dark canvas visibility
 
 ## In Progress
 
@@ -38,7 +39,6 @@ Update this file whenever the current phase, active feature, or implementation s
 ## Next Up
 
 - 18-starter-templates — Prebuilt system design templates that users can import
-- 19-presence-avatars-cursors — Live avatars, presence indicators, and collaborative cursors
 - 20-ai-sidebar-shell — Slide-over AI sidebar with tab navigation
 - 22-design-agent-api — AI design generation API route and Trigger.dev task
 - 23-design-agent-logic — AI generation logic: prompt → structured canvas updates
@@ -53,6 +53,7 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Session Notes
 
+- 2026-07-30 (feature 19): Implemented presence avatars and live cursors. Created `PresenceAvatars` component positioned top-right of canvas — filters Liveblocks others list to exclude current Clerk user, renders collaborator avatar stack (max 5 visible with +N overflow chip), uses profile photos with initials fallback, rings for dark canvas visibility, divider + Clerk UserButton only when collaborators exist. Added cursor broadcasting via `onMouseMove`/`onMouseLeave` on ReactFlow with `useUpdateMyPresence`, tracking viewport-relative position. Updated `liveblocks.config.ts` Presence type: renamed `isThinking` → `thinking` per spec, added global `Liveblocks` interface augmentation for hook type inference. `<Cursors />` from `@liveblocks/react-flow` already renders collaborative cursors from presence. Build passes.
 - 2026-07-30 (feature 17.5): Implemented canvas zoom controls and keyboard shortcuts. Created `CanvasControls` component (bottom-left floating bar) with zoom in/out/fit-view buttons + undo/redo buttons wired to Liveblocks `useUndo`/`useRedo`/`useCanUndo`/`useCanRedo`. Created `useKeyboardShortcuts` hook: +/= zoom in, - zoom out, Cmd+Z undo, Cmd+Shift+Z / Cmd+Y redo; skips while typing in inputs/textareas/contentEditable. Zoom animations at 200ms duration. Integrated into `canvas-wrapper.tsx` inside `ReactFlowProvider`. Build passes.
 - 2026-07-30 (feature 17 / 16-nodes-color-toolbar): Spec is a duplicate of feature 15. Updated `NodeColorToolbar` background from hardcoded `bg-[#18181c]/95` to theme token `bg-elevated/95` per `globals.css` conventions. All other requirements (swatch rendering, active glow, hover scale, canvas isolation, `updateNodeData` sync) were already in place. Build passes.
 - 2026-07-30 (feature 16): Implemented custom edge renderer and inline label editing. Created `CanvasEdge` component using `getSmoothStepPath` for clean right-angle routing, `BaseEdge` for rendering (visible path + invisible 20px-wide click area), and `EdgeLabelRenderer` for label positioning at path midpoint. Labels: double-click to edit, pill badge display when saved, faint "Edge label" placeholder when empty, commit on blur/Enter, cancel on Escape. Edges dim at rest (35% opacity) and brighten on selection (85%). Registered as `canvasEdge` type in `canvas-wrapper.tsx` with `defaultEdgeOptions.type`. Arrow markers preserved. `onPointerDown` stops propagation on label to prevent canvas interactions. Build passes.

@@ -18,6 +18,7 @@ import {
   LiveblocksProvider,
   RoomProvider,
   ClientSideSuspense,
+  useUpdateMyPresence,
 } from "@liveblocks/react"
 import { ErrorBoundary } from "react-error-boundary"
 import { useLiveblocksFlow, Cursors } from "@liveblocks/react-flow"
@@ -28,6 +29,7 @@ import { CanvasNode } from "@/components/editor/canvas-node"
 import { CanvasEdge } from "@/components/editor/canvas-edge"
 import { ShapePanel } from "@/components/editor/shape-panel"
 import { CanvasControls } from "@/components/editor/canvas-controls"
+import { PresenceAvatars } from "@/components/editor/presence-avatars"
 import { DEFAULT_NODE_COLOR } from "@/types/canvas"
 import type { CanvasTemplate } from "@/components/editor/starter-templates"
 
@@ -92,6 +94,8 @@ function CanvasInner({
 
   const { screenToFlowPosition, fitView } = useReactFlow()
   const { onDragStart, createNodeFromDrop } = useShapeDrop()
+  const updateMyPresence = useUpdateMyPresence()
+  const containerRef = useRef<HTMLDivElement>(null)
 
   /* ---- template import --------------------------------------------------- */
 
@@ -165,6 +169,23 @@ function CanvasInner({
     scheduleSave()
   }, [nodes, edges, scheduleSave])
 
+  /* ---- cursor broadcasting ---------------------------------------------- */
+
+  const onMouseMove = useCallback(
+    (event: React.MouseEvent) => {
+      if (!containerRef.current) return
+      const rect = containerRef.current.getBoundingClientRect()
+      updateMyPresence({
+        cursor: { x: event.clientX - rect.left, y: event.clientY - rect.top },
+      })
+    },
+    [updateMyPresence],
+  )
+
+  const onMouseLeave = useCallback(() => {
+    updateMyPresence({ cursor: null })
+  }, [updateMyPresence])
+
   /* ---- drag and drop ----------------------------------------------------- */
 
   const onDragOver = useCallback((event: React.DragEvent) => {
@@ -198,7 +219,7 @@ function CanvasInner({
   /* ---- render ------------------------------------------------------------ */
 
   return (
-    <div className="relative h-full w-full">
+    <div ref={containerRef} className="relative h-full w-full">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -208,6 +229,8 @@ function CanvasInner({
         onDelete={onDelete}
         onDragOver={onDragOver}
         onDrop={onDrop}
+        onMouseMove={onMouseMove}
+        onMouseLeave={onMouseLeave}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         fitView
@@ -235,6 +258,9 @@ function CanvasInner({
         />
         <Cursors />
       </ReactFlow>
+
+      {/* Presence avatars — top-right corner of canvas */}
+      <PresenceAvatars />
 
       {/* Shape panel — floating over canvas */}
       <ShapePanel onDragStart={onDragStart} />
@@ -269,7 +295,7 @@ export function CanvasWrapper({
     <LiveblocksProvider authEndpoint="/api/liveblocks-auth">
       <RoomProvider
         id={projectId}
-        initialPresence={{ cursor: null, isThinking: false }}
+        initialPresence={{ cursor: null, thinking: false }}
       >
         <ErrorBoundary fallback={<CanvasError />}>
           <ClientSideSuspense fallback={<CanvasLoading />}>
