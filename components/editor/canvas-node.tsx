@@ -1,7 +1,7 @@
 "use client"
 
-import { memo } from "react"
-import { Handle, Position, type NodeProps } from "@xyflow/react"
+import { memo, useState, useRef, useEffect, useCallback } from "react"
+import { Handle, Position, NodeResizer, useReactFlow, type NodeProps } from "@xyflow/react"
 
 import { cn } from "@/lib/utils"
 import type { CanvasNodeData } from "@/types/canvas"
@@ -242,13 +242,76 @@ const handleStyle: React.CSSProperties = {
   transition: "opacity 0.15s",
 }
 
+const MIN_WIDTH = 80
+const MIN_HEIGHT = 60
+
 /* -------------------------------------------------------------------------- */
 /*  Node Component                                                            */
 /* -------------------------------------------------------------------------- */
 
-function CanvasNodeComponent({ data, selected }: NodeProps) {
+function CanvasNodeComponent({ id, data, selected }: NodeProps) {
   const nodeData = data as unknown as CanvasNodeData
   const { label, color, textColor, shape, width, height } = nodeData
+
+  const { updateNodeData } = useReactFlow()
+
+  /* ---- inline label editing ---------------------------------------------- */
+
+  const [isEditing, setIsEditing] = useState(false)
+  const [editValue, setEditValue] = useState(label)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
+
+  // Sync edit value when label changes externally
+  useEffect(() => {
+    if (!isEditing) {
+      setEditValue(label)
+    }
+  }, [label, isEditing])
+
+  // Auto-focus and select-all when entering edit mode
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus()
+      inputRef.current.select()
+    }
+  }, [isEditing])
+
+  const startEditing = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+    setIsEditing(true)
+    setEditValue(label)
+  }, [label])
+
+  const commitEdit = useCallback(() => {
+    setIsEditing(false)
+    const trimmed = editValue.trim()
+    if (trimmed !== label) {
+      updateNodeData(id, { label: trimmed } as Partial<CanvasNodeData>)
+    }
+  }, [id, editValue, label, updateNodeData])
+
+  const cancelEdit = useCallback(() => {
+    setIsEditing(false)
+    setEditValue(label)
+  }, [label])
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === "Escape") {
+        e.preventDefault()
+        cancelEdit()
+      }
+      // Shift+Enter to commit, plain Enter for newline (textarea default)
+      if (e.key === "Enter" && e.shiftKey) {
+        e.preventDefault()
+        commitEdit()
+      }
+    },
+    [cancelEdit, commitEdit],
+  )
+
+  /* ---- shape renderer ---------------------------------------------------- */
 
   const shapeEl = (() => {
     switch (shape) {
@@ -317,17 +380,30 @@ function CanvasNodeComponent({ data, selected }: NodeProps) {
         )
     }
   })()
+
+  /* ---- render ------------------------------------------------------------ */
+
   return (
     <div
       className="group relative"
       style={{ width, height }}
-      onPointerDown={(e) => {
-        // Prevent label clicks from propagating to canvas drag
-        if ((e.target as HTMLElement).tagName === "INPUT") {
-          e.stopPropagation()
-        }
-      }}
     >
+      {/* Resize handles — visible when selected */}
+      {selected && (
+        <NodeResizer
+          minWidth={MIN_WIDTH}
+          minHeight={MIN_HEIGHT}
+          handleStyle={{
+            width: 8,
+            height: 8,
+            borderRadius: 4,
+            backgroundColor: "#fff",
+            border: "2px solid #1a1a2e",
+          }}
+          lineStyle={{ borderColor: "rgba(255,255,255,0.2)" }}
+        />
+      )}
+
       {/* Connection handles — all four sides */}
       <Handle
         type="source"
@@ -391,15 +467,45 @@ function CanvasNodeComponent({ data, selected }: NodeProps) {
       {/* Shape body */}
       {shapeEl}
 
-      {/* Label */}
-      <div
-        className="pointer-events-none absolute inset-0 flex items-center justify-center px-2"
-        style={{ color: textColor }}
-      >
-        <span className="truncate text-xs font-medium select-none">
-          {label}
-        </span>
-      </div>
+      {/* Label / inline editor */}
+      {isEditing ? (
+        <textarea
+          ref={inputRef}
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onBlur={commitEdit}
+          onKeyDown={handleKeyDown}
+          onPointerDown={(e) => e.stopPropagation()}
+          className={cn(
+            "absolute inset-0 resize-none bg-transparent text-center",
+            "text-xs font-medium outline-none",
+            "flex items-center justify-center",
+            "placeholder:text-white/25",
+          )}
+          style={{
+            color: textColor,
+            padding: "8px 12px",
+            lineHeight: 1.4,
+          }}
+          placeholder="Label"
+          rows={1}
+        />
+      ) : (
+        <div
+          className={cn(
+            "absolute inset-0 flex items-center justify-center px-2",
+            "cursor-text select-none",
+          )}
+          style={{ color: textColor }}
+          onDoubleClick={startEditing}
+        >
+          <span className="truncate text-xs font-medium">
+            {label || (
+              <span className="text-white/25">Label</span>
+            )}
+          </span>
+        </div>
+      )}
     </div>
   )
 }
