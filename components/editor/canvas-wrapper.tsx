@@ -29,6 +29,7 @@ import { CanvasEdge } from "@/components/editor/canvas-edge"
 import { ShapePanel } from "@/components/editor/shape-panel"
 import { CanvasControls } from "@/components/editor/canvas-controls"
 import { DEFAULT_NODE_COLOR } from "@/types/canvas"
+import type { CanvasTemplate } from "@/components/editor/starter-templates"
 
 /* -------------------------------------------------------------------------- */
 /*  Node/Edge types                                                           */
@@ -73,12 +74,14 @@ interface CanvasInnerProps {
   projectId: string
   onSaveStatusChange: (status: SaveStatus) => void
   saveTriggerRef: React.MutableRefObject<(() => void) | null>
+  importTemplateRef: React.MutableRefObject<((template: CanvasTemplate) => void) | null>
 }
 
 function CanvasInner({
   projectId,
   onSaveStatusChange,
   saveTriggerRef,
+  importTemplateRef,
 }: CanvasInnerProps) {
   const { nodes, edges, onNodesChange, onEdgesChange, onConnect, onDelete } =
     useLiveblocksFlow<Node, Edge>({
@@ -87,8 +90,46 @@ function CanvasInner({
       edges: { initial: [] },
     })
 
-  const { screenToFlowPosition } = useReactFlow()
+  const { screenToFlowPosition, fitView } = useReactFlow()
   const { onDragStart, createNodeFromDrop } = useShapeDrop()
+
+  /* ---- template import --------------------------------------------------- */
+
+  const importTemplate = useCallback(
+    (template: CanvasTemplate) => {
+      // Remove all existing nodes and edges
+      const nodeRemovals = nodes.map((n) => ({ type: "remove" as const, id: n.id }))
+      const edgeRemovals = edges.map((e) => ({ type: "remove" as const, id: e.id }))
+
+      if (edgeRemovals.length > 0) onEdgesChange(edgeRemovals)
+      if (nodeRemovals.length > 0) onNodesChange(nodeRemovals)
+
+      // Add template nodes and edges (cast needed: CanvasNodeData → Record<string, unknown>)
+      const nodeAdditions = template.nodes.map((n) => ({
+        type: "add" as const,
+        item: n as unknown as Node,
+      }))
+      const edgeAdditions = template.edges.map((e) => ({
+        type: "add" as const,
+        item: e as unknown as Edge,
+      }))
+
+      if (nodeAdditions.length > 0) onNodesChange(nodeAdditions)
+      if (edgeAdditions.length > 0) onEdgesChange(edgeAdditions)
+
+      // Fit view after a short delay to let React Flow process the changes
+      setTimeout(() => fitView({ duration: 300 }), 100)
+    },
+    [nodes, edges, onNodesChange, onEdgesChange, fitView],
+  )
+
+  // Expose import function to parent via ref
+  useEffect(() => {
+    importTemplateRef.current = importTemplate
+    return () => {
+      importTemplateRef.current = null
+    }
+  }, [importTemplateRef, importTemplate])
 
   /* ---- autosave ---------------------------------------------------------- */
 
@@ -212,14 +253,17 @@ interface CanvasWrapperProps {
   projectId: string
   onSaveStatusChange?: (status: SaveStatus) => void
   saveTriggerRef?: React.MutableRefObject<(() => void) | null>
+  importTemplateRef?: React.MutableRefObject<((template: CanvasTemplate) => void) | null>
 }
 
 const noopRef: React.MutableRefObject<(() => void) | null> = { current: null }
+const noopImportRef: React.MutableRefObject<((template: CanvasTemplate) => void) | null> = { current: null }
 
 export function CanvasWrapper({
   projectId,
   onSaveStatusChange,
   saveTriggerRef,
+  importTemplateRef,
 }: CanvasWrapperProps) {
   return (
     <LiveblocksProvider authEndpoint="/api/liveblocks-auth">
@@ -234,6 +278,7 @@ export function CanvasWrapper({
                 projectId={projectId}
                 onSaveStatusChange={onSaveStatusChange ?? (() => {})}
                 saveTriggerRef={saveTriggerRef ?? noopRef}
+                importTemplateRef={importTemplateRef ?? noopImportRef}
               />
             </ReactFlowProvider>
           </ClientSideSuspense>

@@ -7,8 +7,10 @@ import { cn } from "@/lib/utils"
 import { WorkspaceNavbar } from "@/components/editor/workspace-navbar"
 import { ProjectSidebar } from "@/components/editor/project-sidebar"
 import { ShareDialog } from "@/components/editor/share-dialog"
+import { StarterTemplatesModal } from "@/components/editor/starter-templates-modal"
 import { CanvasWrapper } from "@/components/editor/canvas-wrapper"
 import type { SaveStatus } from "@/hooks/useCanvasAutosave"
+import type { CanvasTemplate } from "@/components/editor/starter-templates"
 
 import type { ProjectSummary } from "@/hooks/useProjectActions"
 
@@ -40,8 +42,10 @@ export function WorkspaceShell({
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [aiPanelOpen, setAiPanelOpen] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
+  const [templatesOpen, setTemplatesOpen] = useState(false)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle")
   const saveTriggerRef = useRef<(() => void) | null>(null)
+  const importTemplateRef = useRef<((template: CanvasTemplate) => void) | null>(null)
 
   const toggleSidebar = useCallback(() => setSidebarOpen((prev) => !prev), [])
   const closeSidebar = useCallback(() => setSidebarOpen(false), [])
@@ -61,6 +65,11 @@ export function WorkspaceShell({
     saveTriggerRef.current?.()
   }, [])
 
+  const handleImportTemplate = useCallback((template: CanvasTemplate) => {
+    setTemplatesOpen(false)
+    importTemplateRef.current?.(template)
+  }, [])
+
   return (
     <div className="flex h-screen flex-col bg-base overflow-hidden">
       <WorkspaceNavbar
@@ -71,6 +80,7 @@ export function WorkspaceShell({
         onToggleSidebar={toggleSidebar}
         onToggleAiPanel={toggleAiPanel}
         onOpenShare={() => setShareOpen(true)}
+        onOpenTemplates={() => setTemplatesOpen(true)}
         onSave={handleManualSave}
       />
 
@@ -79,6 +89,12 @@ export function WorkspaceShell({
         projectId={projectId}
         isOwner={isOwner}
         onClose={() => setShareOpen(false)}
+      />
+
+      <StarterTemplatesModal
+        open={templatesOpen}
+        onClose={() => setTemplatesOpen(false)}
+        onImport={handleImportTemplate}
       />
 
       {/* Left sidebar — floats over canvas */}
@@ -97,6 +113,7 @@ export function WorkspaceShell({
           projectId={projectId}
           onSaveStatusChange={setSaveStatus}
           saveTriggerRef={saveTriggerRef}
+          importTemplateRef={importTemplateRef}
         />
       </main>
 

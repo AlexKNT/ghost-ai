@@ -6,6 +6,7 @@ import {
   Share2,
   MessageSquare,
   Save,
+  LayoutTemplate,
 } from "lucide-react"
 import { UserButton } from "@clerk/nextjs"
 
@@ -24,6 +25,7 @@ interface WorkspaceNavbarProps {
   onToggleSidebar: () => void
   onToggleAiPanel: () => void
   onOpenShare: () => void
+  onOpenTemplates: () => void
   onSave: () => void
 }
 
@@ -50,6 +52,7 @@ export function WorkspaceNavbar({
   onToggleSidebar,
   onToggleAiPanel,
   onOpenShare,
+  onOpenTemplates,
   onSave,
 }: WorkspaceNavbarProps) {
   return (
@@ -104,6 +107,20 @@ export function WorkspaceNavbar({
         >
           <Save className="size-3.5" />
           {saveLabel[saveStatus]}
+        </button>
+
+        {/* Templates button */}
+        <button
+          type="button"
+          onClick={onOpenTemplates}
+          className={cn(
+            "inline-flex size-8 items-center justify-center rounded-xl",
+            "text-copy-muted transition-colors",
+            "hover:bg-subtle hover:text-copy-primary",
+          )}
+          aria-label="Starter templates"
+        >
+          <LayoutTemplate className="size-4" />
         </button>
 
         {/* Share button */}

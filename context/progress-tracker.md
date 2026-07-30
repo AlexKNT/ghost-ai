@@ -8,7 +8,7 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Current Goal
 
-- Complete canvas ergonomics (feature 17), then proceed through starter templates, presence, AI sidebar, and AI integration. All foundation features (auth, projects, canvas, shapes, edges, autosave) are in place.
+- Complete presence (feature 19), then proceed through AI sidebar and AI integration. All foundation features (auth, projects, canvas, shapes, edges, autosave, templates) are in place.
 
 ## Completed
 
