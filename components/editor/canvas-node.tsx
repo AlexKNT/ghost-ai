@@ -256,6 +256,21 @@ function CanvasNodeComponent({ id, data, selected }: NodeProps) {
 
   const { updateNodeData } = useReactFlow()
 
+  /* ---- live dimensions (track resize in real time) ----------------------- */
+
+  const [liveWidth, setLiveWidth] = useState(width)
+  const [liveHeight, setLiveHeight] = useState(height)
+  const isResizingRef = useRef(false)
+
+  // Sync live dimensions when data changes externally (e.g. from Liveblocks)
+  // but only when not actively resizing locally
+  useEffect(() => {
+    if (!isResizingRef.current) {
+      setLiveWidth(width)
+      setLiveHeight(height)
+    }
+  }, [width, height])
+
   /* ---- inline label editing ---------------------------------------------- */
 
   const [isEditing, setIsEditing] = useState(false)
@@ -331,8 +346,8 @@ function CanvasNodeComponent({ id, data, selected }: NodeProps) {
       case "rectangle":
         return (
           <RectangleShape
-            width={width}
-            height={height}
+            width={liveWidth}
+            height={liveHeight}
             color={color}
             selected={!!selected}
           />
@@ -340,8 +355,8 @@ function CanvasNodeComponent({ id, data, selected }: NodeProps) {
       case "pill":
         return (
           <PillShape
-            width={width}
-            height={height}
+            width={liveWidth}
+            height={liveHeight}
             color={color}
             selected={!!selected}
           />
@@ -349,8 +364,8 @@ function CanvasNodeComponent({ id, data, selected }: NodeProps) {
       case "circle":
         return (
           <CircleShape
-            width={width}
-            height={height}
+            width={liveWidth}
+            height={liveHeight}
             color={color}
             selected={!!selected}
           />
@@ -358,8 +373,8 @@ function CanvasNodeComponent({ id, data, selected }: NodeProps) {
       case "diamond":
         return (
           <DiamondShape
-            width={width}
-            height={height}
+            width={liveWidth}
+            height={liveHeight}
             color={color}
             selected={!!selected}
           />
@@ -367,8 +382,8 @@ function CanvasNodeComponent({ id, data, selected }: NodeProps) {
       case "hexagon":
         return (
           <HexagonShape
-            width={width}
-            height={height}
+            width={liveWidth}
+            height={liveHeight}
             color={color}
             selected={!!selected}
           />
@@ -376,8 +391,8 @@ function CanvasNodeComponent({ id, data, selected }: NodeProps) {
       case "cylinder":
         return (
           <CylinderShape
-            width={width}
-            height={height}
+            width={liveWidth}
+            height={liveHeight}
             color={color}
             selected={!!selected}
           />
@@ -385,8 +400,8 @@ function CanvasNodeComponent({ id, data, selected }: NodeProps) {
       default:
         return (
           <RectangleShape
-            width={width}
-            height={height}
+            width={liveWidth}
+            height={liveHeight}
             color={color}
             selected={!!selected}
           />
@@ -399,13 +414,27 @@ function CanvasNodeComponent({ id, data, selected }: NodeProps) {
   return (
     <div
       className="group relative"
-      style={{ width, height }}
+      style={{ width: liveWidth, height: liveHeight }}
     >
       {/* Resize handles — visible when selected */}
       {selected && (
         <NodeResizer
           minWidth={MIN_WIDTH}
           minHeight={MIN_HEIGHT}
+          onResize={(_event, params) => {
+            setLiveWidth(params.width)
+            setLiveHeight(params.height)
+          }}
+          onResizeStart={() => {
+            isResizingRef.current = true
+          }}
+          onResizeEnd={(_event, params) => {
+            isResizingRef.current = false
+            updateNodeData(id, {
+              width: params.width,
+              height: params.height,
+            } as Partial<CanvasNodeData>)
+          }}
           handleStyle={{
             width: 8,
             height: 8,
