@@ -57,6 +57,4 @@ export interface ShapeDragPayload {
   shape: NodeShape
   width: number
   height: number
-  offsetX: number
-  offsetY: number
 }
