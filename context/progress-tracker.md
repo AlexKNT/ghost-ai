@@ -26,8 +26,10 @@ Update this file whenever the current phase, active feature, or implementation s
 - 12-shape-panel — Floating shape panel with drag-and-drop onto canvas (rectangle, diamond, circle, pill, cylinder, hexagon)
 - 13-node-shape — Custom node renderer with all 6 shape types (CSS + SVG), 4 connection handles per node
 - 15-node-color-toolbar — Floating color swatch toolbar above selected nodes, updates node background/text from 8 predefined pairs via `updateNodeData`
+- 17-nodes-color-toolbar — Duplicate of 15; updated `NodeColorToolbar` to use `bg-elevated` theme token from `globals.css` instead of hardcoded hex
 - 16-edge-behavior — Custom `CanvasEdge` with smooth-step routing, dim/bright states, 20px invisible click area, inline label editing via `EdgeLabelRenderer` (double-click to edit, pill badge display, faint placeholder when empty), arrow markers, registered as `canvasEdge` type
 - 21-canvas-autosave — Canvas save/load API routes (Vercel Blob), autosave hook, Save button in workspace navbar
+- 17.5-canvas-ergonomics — Floating zoom/undo/redo control bar (bottom-left), `useKeyboardShortcuts` hook (+/− zoom, Cmd+Z/Cmd+Shift+Z undo/redo), Liveblocks `useUndo`/`useRedo` wired with disabled states, skips shortcuts while editing text
 
 ## In Progress
 
@@ -35,7 +37,6 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Next Up
 
-- 17-canvas-ergonomics — Canvas pan/zoom ergonomics, keyboard shortcuts, and viewport controls
 - 18-starter-templates — Prebuilt system design templates that users can import
 - 19-presence-avatars-cursors — Live avatars, presence indicators, and collaborative cursors
 - 20-ai-sidebar-shell — Slide-over AI sidebar with tab navigation
@@ -52,6 +53,8 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Session Notes
 
+- 2026-07-30 (feature 17.5): Implemented canvas zoom controls and keyboard shortcuts. Created `CanvasControls` component (bottom-left floating bar) with zoom in/out/fit-view buttons + undo/redo buttons wired to Liveblocks `useUndo`/`useRedo`/`useCanUndo`/`useCanRedo`. Created `useKeyboardShortcuts` hook: +/= zoom in, - zoom out, Cmd+Z undo, Cmd+Shift+Z / Cmd+Y redo; skips while typing in inputs/textareas/contentEditable. Zoom animations at 200ms duration. Integrated into `canvas-wrapper.tsx` inside `ReactFlowProvider`. Build passes.
+- 2026-07-30 (feature 17 / 16-nodes-color-toolbar): Spec is a duplicate of feature 15. Updated `NodeColorToolbar` background from hardcoded `bg-[#18181c]/95` to theme token `bg-elevated/95` per `globals.css` conventions. All other requirements (swatch rendering, active glow, hover scale, canvas isolation, `updateNodeData` sync) were already in place. Build passes.
 - 2026-07-30 (feature 16): Implemented custom edge renderer and inline label editing. Created `CanvasEdge` component using `getSmoothStepPath` for clean right-angle routing, `BaseEdge` for rendering (visible path + invisible 20px-wide click area), and `EdgeLabelRenderer` for label positioning at path midpoint. Labels: double-click to edit, pill badge display when saved, faint "Edge label" placeholder when empty, commit on blur/Enter, cancel on Escape. Edges dim at rest (35% opacity) and brighten on selection (85%). Registered as `canvasEdge` type in `canvas-wrapper.tsx` with `defaultEdgeOptions.type`. Arrow markers preserved. `onPointerDown` stops propagation on label to prevent canvas interactions. Build passes.
 - 2026-07-30 (feature 15): Implemented floating node color toolbar. Created `NodeColorToolbar` component — appears above selected nodes, shows 8 circular swatches from `NODE_COLORS`. Active swatch gets a colored border + subtle glow matching its text color. Hover scales swatch to 110%. Clicks call `updateNodeData` to sync through Liveblocks. `onPointerDown` stops propagation to prevent canvas drag. Integrated into `canvas-node.tsx` conditional on `selected`. Build passes.
 - 2026-07-30 (feature 14): Added resize handles and inline label editing to canvas nodes. `NodeResizer` from `@xyflow/react` provides corner handles on selected nodes with min dimensions 80×60 and subtle white/dark styling. Double-clicking a node label enters inline edit mode with a centered `<textarea>`, commits on blur, cancels on Escape. `updateNodeData` syncs label changes through Liveblocks. `onPointerDown` on the textarea stops propagation to prevent canvas drag/pan during editing. Empty labels show a "Label" placeholder. Build passes.

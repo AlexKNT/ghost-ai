@@ -27,6 +27,7 @@ import { useCanvasAutosave, type SaveStatus } from "@/hooks/useCanvasAutosave"
 import { CanvasNode } from "@/components/editor/canvas-node"
 import { CanvasEdge } from "@/components/editor/canvas-edge"
 import { ShapePanel } from "@/components/editor/shape-panel"
+import { CanvasControls } from "@/components/editor/canvas-controls"
 import { DEFAULT_NODE_COLOR } from "@/types/canvas"
 
 /* -------------------------------------------------------------------------- */
@@ -196,6 +197,9 @@ function CanvasInner({
 
       {/* Shape panel — floating over canvas */}
       <ShapePanel onDragStart={onDragStart} />
+
+      {/* Canvas controls — zoom, undo/redo */}
+      <CanvasControls />
     </div>
   )
 }

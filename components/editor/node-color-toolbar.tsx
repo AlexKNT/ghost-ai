@@ -38,7 +38,7 @@ function NodeColorToolbarComponent({
       className={cn(
         "absolute left-1/2 -translate-x-1/2 z-10",
         "flex items-center gap-1 rounded-xl px-2 py-1.5",
-        "bg-[#18181c]/95 backdrop-blur-sm border border-white/10 shadow-lg",
+        "bg-elevated/95 backdrop-blur-sm border border-white/10 shadow-lg",
       )}
       style={{ bottom: "calc(100% + 8px)" }}
       onPointerDown={(e) => e.stopPropagation()}
