@@ -31,6 +31,7 @@ Update this file whenever the current phase, active feature, or implementation s
 - 21-canvas-autosave — Canvas save/load API routes (Vercel Blob), autosave hook, Save button in workspace navbar
 - 17.5-canvas-ergonomics — Floating zoom/undo/redo control bar (bottom-left), `useKeyboardShortcuts` hook (+/− zoom, Cmd+Z/Cmd+Shift+Z undo/redo), Liveblocks `useUndo`/`useRedo` wired with disabled states, skips shortcuts while editing text
 - 19-presence-avatars-cursors — Presence avatars in canvas top-right (collaborator avatars with Clerk UserButton, divider when collaborators present), live cursor broadcasting via `onMouseMove`/`onMouseLeave` on ReactFlow, `PresenceAvatars` component with avatar stack (max 5 + overflow), fallback initials, ring for dark canvas visibility
+- 22-design-agent-api — AI design generation backend wiring: `POST /api/ai/design` (Clerk auth + project access check → `tasks.trigger` → TaskRun record), `POST /api/ai/design/token` (ownership-verified run-scoped Trigger.dev public token), `TaskRun` Prisma model (unique `runId`, compound `userId`+`projectId` index, FK to Project), minimal `designAgentTask` in `src/trigger/design-agent.ts`, installed `@trigger.dev/sdk`, reused existing `trigger.config.ts` (`dirs: ["./src/trigger"]`)
 
 ## In Progress
 
@@ -40,19 +41,19 @@ Update this file whenever the current phase, active feature, or implementation s
 
 - 18-starter-templates — Prebuilt system design templates that users can import
 - 20-ai-sidebar-shell — Slide-over AI sidebar with tab navigation
-- 22-design-agent-api — AI design generation API route and Trigger.dev task
 - 23-design-agent-logic — AI generation logic: prompt → structured canvas updates
 
 ## Open Questions
 
-- Add unresolved product or implementation questions here.
+- `TRIGGER_SECRET_KEY` is not yet set in `.env.local` — required at runtime for `tasks.trigger()` and `auth.createPublicToken()` to authenticate with Trigger.dev.
 
 ## Architecture Decisions
 
-- Add decisions that affect the system design or data model.
+- Trigger.dev tasks live in `src/trigger/` (configured by the existing `trigger.config.ts` `dirs: ["./src/trigger"]`). The design task is at `src/trigger/design-agent.ts`, not `trigger/design-agent.ts`.
 
 ## Session Notes
 
+- 2026-08-14 (feature 22): Implemented AI design generation backend wiring. Installed `@trigger.dev/sdk@^4.5.11`. Added `TaskRun` Prisma model (`runId` unique, `projectId`, `userId`, `createdAt`, FK to `Project` with cascade, compound index on `userId`+`projectId`) + migration `20260814071527_add_task_run`. Created `app/api/ai/design/route.ts` (Clerk auth → validate prompt/roomId/projectId → `checkProjectAccess` → `tasks.trigger("design-agent", { prompt, roomId })` → create TaskRun → return `{ runId }`) and `app/api/ai/design/token/route.ts` (auth → find TaskRun by runId → verify `userId` ownership → `auth.createPublicToken({ scopes: { read: { runs: [runId] } } })` → return `{ token }`). Created minimal `src/trigger/design-agent.ts` task (logs + echoes payload, no AI logic). Reused the existing `trigger.config.ts` (project ref already set, `dirs: ["./src/trigger"]`) instead of creating a new one; the task lives under `src/trigger` to match that config. Added `trigger:dev` npm script. Build passes; new routes registered as dynamic.
 - 2026-07-30 (feature 19): Implemented presence avatars and live cursors. Created `PresenceAvatars` component positioned top-right of canvas — filters Liveblocks others list to exclude current Clerk user, renders collaborator avatar stack (max 5 visible with +N overflow chip), uses profile photos with initials fallback, rings for dark canvas visibility, divider + Clerk UserButton only when collaborators exist. Added cursor broadcasting via `onMouseMove`/`onMouseLeave` on ReactFlow with `useUpdateMyPresence`, tracking viewport-relative position. Updated `liveblocks.config.ts` Presence type: renamed `isThinking` → `thinking` per spec, added global `Liveblocks` interface augmentation for hook type inference. `<Cursors />` from `@liveblocks/react-flow` already renders collaborative cursors from presence. Build passes.
 - 2026-07-30 (feature 17.5): Implemented canvas zoom controls and keyboard shortcuts. Created `CanvasControls` component (bottom-left floating bar) with zoom in/out/fit-view buttons + undo/redo buttons wired to Liveblocks `useUndo`/`useRedo`/`useCanUndo`/`useCanRedo`. Created `useKeyboardShortcuts` hook: +/= zoom in, - zoom out, Cmd+Z undo, Cmd+Shift+Z / Cmd+Y redo; skips while typing in inputs/textareas/contentEditable. Zoom animations at 200ms duration. Integrated into `canvas-wrapper.tsx` inside `ReactFlowProvider`. Build passes.
 - 2026-07-30 (feature 17 / 16-nodes-color-toolbar): Spec is a duplicate of feature 15. Updated `NodeColorToolbar` background from hardcoded `bg-[#18181c]/95` to theme token `bg-elevated/95` per `globals.css` conventions. All other requirements (swatch rendering, active glow, hover scale, canvas isolation, `updateNodeData` sync) were already in place. Build passes.
