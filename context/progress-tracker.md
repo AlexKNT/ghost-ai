@@ -8,7 +8,7 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Current Goal
 
-- Complete starter templates (feature 18), then proceed through AI sidebar and AI integration.
+- AI sidebar shell is complete; proceed through AI integration (design agent logic, presence state, chat feed) and spec generation.
 
 ## Completed
 
@@ -32,6 +32,8 @@ Update this file whenever the current phase, active feature, or implementation s
 - 17.5-canvas-ergonomics — Floating zoom/undo/redo control bar (bottom-left), `useKeyboardShortcuts` hook (+/− zoom, Cmd+Z/Cmd+Shift+Z undo/redo), Liveblocks `useUndo`/`useRedo` wired with disabled states, skips shortcuts while editing text
 - 19-presence-avatars-cursors — Presence avatars in canvas top-right (collaborator avatars with Clerk UserButton, divider when collaborators present), live cursor broadcasting via `onMouseMove`/`onMouseLeave` on ReactFlow, `PresenceAvatars` component with avatar stack (max 5 + overflow), fallback initials, ring for dark canvas visibility
 - 22-design-agent-api — AI design generation backend wiring: `POST /api/ai/design` (Clerk auth + project access check → `tasks.trigger` → TaskRun record), `POST /api/ai/design/token` (ownership-verified run-scoped Trigger.dev public token), `TaskRun` Prisma model (unique `runId`, compound `userId`+`projectId` index, FK to Project), minimal `designAgentTask` in `src/trigger/design-agent.ts`, installed `@trigger.dev/sdk`, reused existing `trigger.config.ts` (`dirs: ["./src/trigger"]`)
+- 18-starter-templates — Starter template library (`CANVAS_TEMPLATES`: microservices, CI/CD pipeline, event-driven), import modal with lightweight SVG previews, navbar entry point, and canvas replacement + fit-view wiring (verified already implemented — was missing from this list)
+- 20-ai-sidebar-shell — Floating `AISidebar` component (`components/editor/ai-sidebar.tsx`) separated from `workspace-shell`: preserved floating slide-in animation, header (AI Workspace / Collaborate with Ghost AI + bot icon + close), AI Architect and Specs tabs, chat empty state with starter prompt chips, auto-resizing composer (72–160px) with Enter/Shift+Enter, and a static demo spec card with a disabled download action
 
 ## In Progress
 
@@ -39,9 +41,12 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Next Up
 
-- 18-starter-templates — Prebuilt system design templates that users can import
-- 20-ai-sidebar-shell — Slide-over AI sidebar with tab navigation
 - 23-design-agent-logic — AI generation logic: prompt → structured canvas updates
+- 24-ai-presence-state — Shared AI thinking/status indicators in the sidebar
+- 25-sidebar-chat-feed — Room-scoped `ai-chat` Liveblocks feed wired into the sidebar
+- 26-ai-chat-functional — Sidebar submit → design task → realtime run status
+- 28-spec-persistence-download — Persist specs to Vercel Blob + secure download route
+- 29-spec-ui-integration — Spec list, preview modal, and download in the Specs tab
 
 ## Open Questions
 
@@ -53,6 +58,7 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Session Notes
 
+- 2026-09-11 (feature 20): Implemented the AI sidebar shell. Created `components/editor/ai-sidebar.tsx` — a client component with parent-controlled open state (`isOpen`/`onClose`) that always renders so the existing `translate-x` slide transition is preserved (`translate-x-0` open → `translate-x-[calc(100%+2px)]` closed), with `inert` when closed. Header (bot icon, `AI Workspace`, `Collaborate with Ghost AI`, close button), `Tabs` with **AI Architect** (empty state + starter chips, scrollable chat area, user/assistant bubble styles, auto-resizing composer clamped to 72–160px, Enter submits / Shift+Enter newlines) and **Specs** (Generate Spec button + static demo spec card with disabled download). Replaced the placeholder `aside` in `workspace-shell.tsx` with `<AISidebar />` and added a `closeAiPanel` callback. **Fix:** `border-surface-border` (and `border-subtle-border`) are documented in `ui-context.md`/`code-standards.md` and used in `canvas-wrapper.tsx`, but were never mapped in `globals.css` — added both aliases to `@theme inline` so the utilities resolve (`#2a2a30` / `#3a3a42`). Spec token shorthand was mapped to canonical tokens: `text-primary-text` → `text-copy-primary`, `text-muted-text` → `text-copy-muted`, `text-accent-text` → `text-ai-text`, `bg-brand-dim` → `bg-accent-dim`, and "accent" in the AI sidebar → the AI accent tokens (`bg-ai`, `text-ai-text`), keeping `border-brand/50` for user bubbles. UI only — no backend, Liveblocks, or AI generation logic added. Build passes.
 - 2026-08-14 (feature 22): Implemented AI design generation backend wiring. Installed `@trigger.dev/sdk@^4.5.11`. Added `TaskRun` Prisma model (`runId` unique, `projectId`, `userId`, `createdAt`, FK to `Project` with cascade, compound index on `userId`+`projectId`) + migration `20260814071527_add_task_run`. Created `app/api/ai/design/route.ts` (Clerk auth → validate prompt/roomId/projectId → `checkProjectAccess` → `tasks.trigger("design-agent", { prompt, roomId })` → create TaskRun → return `{ runId }`) and `app/api/ai/design/token/route.ts` (auth → find TaskRun by runId → verify `userId` ownership → `auth.createPublicToken({ scopes: { read: { runs: [runId] } } })` → return `{ token }`). Created minimal `src/trigger/design-agent.ts` task (logs + echoes payload, no AI logic). Reused the existing `trigger.config.ts` (project ref already set, `dirs: ["./src/trigger"]`) instead of creating a new one; the task lives under `src/trigger` to match that config. Added `trigger:dev` npm script. Build passes; new routes registered as dynamic.
 - 2026-07-30 (feature 19): Implemented presence avatars and live cursors. Created `PresenceAvatars` component positioned top-right of canvas — filters Liveblocks others list to exclude current Clerk user, renders collaborator avatar stack (max 5 visible with +N overflow chip), uses profile photos with initials fallback, rings for dark canvas visibility, divider + Clerk UserButton only when collaborators exist. Added cursor broadcasting via `onMouseMove`/`onMouseLeave` on ReactFlow with `useUpdateMyPresence`, tracking viewport-relative position. Updated `liveblocks.config.ts` Presence type: renamed `isThinking` → `thinking` per spec, added global `Liveblocks` interface augmentation for hook type inference. `<Cursors />` from `@liveblocks/react-flow` already renders collaborative cursors from presence. Build passes.
 - 2026-07-30 (feature 17.5): Implemented canvas zoom controls and keyboard shortcuts. Created `CanvasControls` component (bottom-left floating bar) with zoom in/out/fit-view buttons + undo/redo buttons wired to Liveblocks `useUndo`/`useRedo`/`useCanUndo`/`useCanRedo`. Created `useKeyboardShortcuts` hook: +/= zoom in, - zoom out, Cmd+Z undo, Cmd+Shift+Z / Cmd+Y redo; skips while typing in inputs/textareas/contentEditable. Zoom animations at 200ms duration. Integrated into `canvas-wrapper.tsx` inside `ReactFlowProvider`. Build passes.
