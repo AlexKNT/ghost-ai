@@ -31,12 +31,18 @@ export function useCanvasAutosave({
   const [status, setStatus] = useState<SaveStatus>("idle")
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const statusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Keep the latest getter available without invalidating the debounce timer.
   const getCanvasJsonRef = useRef(getCanvasJson)
-  getCanvasJsonRef.current = getCanvasJson
+  useEffect(() => {
+    getCanvasJsonRef.current = getCanvasJson
+  }, [getCanvasJson])
 
   /* ---- perform save ------------------------------------------------------ */
 
   const save = useCallback(async () => {
+    if (!enabled) return
+
     const json = getCanvasJsonRef.current()
     if (!json) return
 
@@ -59,19 +65,22 @@ export function useCanvasAutosave({
     statusTimerRef.current = setTimeout(() => {
       setStatus("idle")
     }, 2500)
-  }, [projectId])
+  }, [projectId, enabled])
 
   const saveRef = useRef(save)
-  saveRef.current = save
+  useEffect(() => {
+    saveRef.current = save
+  }, [save])
 
   /* ---- debounced autosave ------------------------------------------------ */
 
   const scheduleSave = useCallback(() => {
+    if (!enabled) return
     if (timerRef.current) clearTimeout(timerRef.current)
     timerRef.current = setTimeout(() => {
       saveRef.current()
     }, debounceMs)
-  }, [debounceMs])
+  }, [debounceMs, enabled])
 
   /* ---- cleanup ----------------------------------------------------------- */
 
@@ -82,5 +91,5 @@ export function useCanvasAutosave({
     }
   }, [])
 
-  return { status, save, scheduleSave, enabled }
+  return { status, save, scheduleSave }
 }

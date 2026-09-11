@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -97,6 +97,73 @@ function CanvasInner({
   const updateMyPresence = useUpdateMyPresence()
   const containerRef = useRef<HTMLDivElement>(null)
 
+  /* ---- saved canvas hydration -------------------------------------------- */
+
+  // Whether the room already held nodes/edges when the canvas first mounted.
+  // If so, we skip loading the saved snapshot to avoid overwriting live work.
+  const [roomHadContentOnMount] = useState(
+    () => nodes.length > 0 || edges.length > 0,
+  )
+
+  // Autosave stays disabled until the initial load attempt settles so an empty
+  // mount can never clobber an existing saved snapshot.
+  const [hydrated, setHydrated] = useState(roomHadContentOnMount)
+
+  // Keep the latest change handlers available without re-running the load effect.
+  const handlersRef = useRef({ onNodesChange, onEdgesChange })
+  useEffect(() => {
+    handlersRef.current = { onNodesChange, onEdgesChange }
+  })
+
+  useEffect(() => {
+    // Active collaboration in the room — saved state must not overwrite it.
+    if (roomHadContentOnMount) return
+
+    let cancelled = false
+
+    const loadSavedCanvas = async () => {
+      try {
+        const res = await fetch(`/api/projects/${projectId}/canvas`, {
+          cache: "no-store",
+        })
+        if (!res.ok) return
+
+        const text = await res.text()
+        if (!text || text === "null") return
+
+        const parsed = JSON.parse(text) as { nodes?: Node[]; edges?: Edge[] }
+        if (cancelled) return
+
+        const savedNodes = Array.isArray(parsed?.nodes) ? parsed.nodes : []
+        const savedEdges = Array.isArray(parsed?.edges) ? parsed.edges : []
+        if (savedNodes.length === 0 && savedEdges.length === 0) return
+
+        if (savedNodes.length > 0) {
+          handlersRef.current.onNodesChange(
+            savedNodes.map((node) => ({ type: "add" as const, item: node })),
+          )
+        }
+        if (savedEdges.length > 0) {
+          handlersRef.current.onEdgesChange(
+            savedEdges.map((edge) => ({ type: "add" as const, item: edge })),
+          )
+        }
+
+        setTimeout(() => fitView({ duration: 300 }), 100)
+      } catch (error) {
+        console.error("Failed to load saved canvas:", error)
+      } finally {
+        if (!cancelled) setHydrated(true)
+      }
+    }
+
+    void loadSavedCanvas()
+
+    return () => {
+      cancelled = true
+    }
+  }, [projectId, fitView, roomHadContentOnMount])
+
   /* ---- template import --------------------------------------------------- */
 
   const importTemplate = useCallback(
@@ -145,6 +212,7 @@ function CanvasInner({
     projectId,
     getCanvasJson,
     debounceMs: 3000,
+    enabled: hydrated,
   })
 
   // Expose save function to parent via ref
@@ -164,10 +232,22 @@ function CanvasInner({
     onSaveStatusChange(saveStatus)
   }, [saveStatus, onSaveStatusChange])
 
-  // Schedule autosave when nodes or edges change
+  // Schedule autosave only after hydration and only once the canvas actually
+  // diverges from the hydrated baseline (prevents redundant/no-op writes).
+  const baselineRef = useRef<string | null>(null)
   useEffect(() => {
+    if (!hydrated) return
+
+    const json = getCanvasJson()
+    if (baselineRef.current === null) {
+      baselineRef.current = json
+      return
+    }
+    if (json === baselineRef.current) return
+
+    baselineRef.current = json
     scheduleSave()
-  }, [nodes, edges, scheduleSave])
+  }, [hydrated, getCanvasJson, scheduleSave])
 
   /* ---- cursor broadcasting ---------------------------------------------- */
 

@@ -1,8 +1,13 @@
 import { auth } from "@clerk/nextjs/server"
 import { NextResponse } from "next/server"
-import { put } from "@vercel/blob"
+import { get, put } from "@vercel/blob"
 import { prisma } from "@/lib/prisma"
 import { checkProjectAccess, getClerkIdentity } from "@/lib/project-access"
+
+/** Canvas blobs are stored under a deterministic, project-scoped pathname. */
+function canvasPathname(projectId: string) {
+  return `canvas/${projectId}.json`
+}
 
 /* -------------------------------------------------------------------------- */
 /*  PUT /api/projects/[projectId]/canvas — Save canvas state                  */
@@ -31,10 +36,32 @@ export async function PUT(
   try {
     const canvasJson = await request.text()
 
-    // Upload canvas JSON to Vercel Blob
-    const blob = await put(`canvas/${projectId}.json`, canvasJson, {
+    // Validate the payload before persisting — an invalid blob would break loads.
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(canvasJson)
+    } catch {
+      return NextResponse.json({ error: "Invalid canvas JSON" }, { status: 400 })
+    }
+
+    if (
+      typeof parsed !== "object" ||
+      parsed === null ||
+      !Array.isArray((parsed as { nodes?: unknown }).nodes) ||
+      !Array.isArray((parsed as { edges?: unknown }).edges)
+    ) {
+      return NextResponse.json(
+        { error: "Canvas must contain nodes and edges arrays" },
+        { status: 400 },
+      )
+    }
+
+    // Upload canvas JSON to Vercel Blob (overwrite the existing snapshot)
+    const blob = await put(canvasPathname(projectId), canvasJson, {
       access: "private",
       contentType: "application/json",
+      addRandomSuffix: false,
+      allowOverwrite: true,
     })
 
     // Store the blob URL on the Prisma project record
@@ -88,13 +115,20 @@ export async function GET(
       return NextResponse.json(null)
     }
 
-    // Fetch the canvas JSON from Vercel Blob using the SDK
-    const response = await fetch(project.canvasJsonPath)
-    if (!response.ok) {
+    // Fetch the canvas JSON from Vercel Blob. Private blobs are only readable
+    // through the authenticated SDK, not a bare fetch(). `useCache: false`
+    // guarantees the latest snapshot rather than a cached copy.
+    const blob = await get(project.canvasJsonPath, {
+      access: "private",
+      useCache: false,
+    })
+
+    if (!blob || blob.statusCode !== 200 || !blob.stream) {
       return NextResponse.json(null)
     }
 
-    const canvasJson = await response.text()
+    const canvasJson = await new Response(blob.stream).text()
+
     return new NextResponse(canvasJson, {
       headers: { "Content-Type": "application/json" },
     })
