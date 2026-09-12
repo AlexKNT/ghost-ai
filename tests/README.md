@@ -20,6 +20,7 @@ npm run test:watch  # watch mode
 | `design-plan.test.ts`       | AI design plan normalization (the validation gate before any mutation) |
 | `starter-templates.test.ts` | Template snapshots satisfy the same schema as user-created content     |
 | `task-schemas.test.ts`      | Zod schemas for the status feed and structured model output            |
+| `ai-status.test.ts`         | Latest-message selection from the `ai-status-feed` payloads            |
 | `project-access.test.ts`    | Ownership and collaborator access checks with Clerk/Prisma doubles     |
 | `liveblocks-color.test.ts`  | Deterministic collaborator colors                                     |
 

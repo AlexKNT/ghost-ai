@@ -1,12 +1,14 @@
 "use client"
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react"
-import { Bot, Download, FileText, Send, Sparkles, X } from "lucide-react"
+import { Bot, Download, FileText, Loader2, Send, Sparkles, X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useAiStatusFeed } from "@/hooks/useAiStatusFeed"
+import type { DesignRunStatus } from "@/types/tasks"
 
 /* -------------------------------------------------------------------------- */
 /*  Types                                                                     */
@@ -37,6 +39,15 @@ const STARTER_PROMPTS = [
 
 const TEXTAREA_MIN_HEIGHT = 72
 const TEXTAREA_MAX_HEIGHT = 160
+
+/** Fallback label when a status message carries no text of its own. */
+const STATUS_LABELS: Record<DesignRunStatus, string> = {
+  queued: "Queued…",
+  thinking: "Thinking…",
+  applying: "Applying changes…",
+  complete: "Generation complete",
+  error: "Generation failed",
+}
 
 const DEMO_SPEC = {
   title: "System Architecture Spec",
@@ -109,6 +120,9 @@ function AiArchitectTab() {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState("")
 
+  // Shared AI activity, published to every participant through the room feed.
+  const { message, isGenerating } = useAiStatusFeed()
+
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -132,6 +146,9 @@ function AiArchitectTab() {
   }, [messages])
 
   const handleSubmit = (value: string) => {
+    // Generation is shared state — everyone in the room is paused while it runs.
+    if (isGenerating) return
+
     const content = value.trim()
     if (!content) return
 
@@ -148,6 +165,11 @@ function AiArchitectTab() {
       handleSubmit(input)
     }
   }
+
+  // Only the most recent status message is shown, and only if it says something.
+  const statusText =
+    message?.text?.trim() ||
+    (message?.status ? STATUS_LABELS[message.status] : null)
 
   return (
     <>
@@ -166,12 +188,40 @@ function AiArchitectTab() {
 
       {/* Input area */}
       <div className="shrink-0 border-t border-surface-border p-3">
+        {statusText && (
+          <div
+            role="status"
+            aria-live="polite"
+            aria-busy={isGenerating}
+            className={cn(
+              "mb-2 flex items-start gap-2 rounded-xl border px-2.5 py-2 text-xs",
+              isGenerating
+                ? "border-ai/40 bg-ai/10 text-ai-text"
+                : "border-surface-border bg-elevated text-copy-muted",
+            )}
+          >
+            {isGenerating ? (
+              <Loader2
+                className="mt-px size-3.5 shrink-0 animate-spin"
+                aria-hidden="true"
+              />
+            ) : (
+              <Sparkles
+                className="mt-px size-3.5 shrink-0"
+                aria-hidden="true"
+              />
+            )}
+            <span className="min-w-0 flex-1 break-words">{statusText}</span>
+          </div>
+        )}
+
         <div className="flex items-end gap-2">
           <Textarea
             ref={textareaRef}
             value={input}
             onChange={(event) => setInput(event.target.value)}
             onKeyDown={handleKeyDown}
+            disabled={isGenerating}
             placeholder="Describe your system design..."
             aria-label="Message Ghost AI"
             className={cn(
@@ -184,15 +234,21 @@ function AiArchitectTab() {
             variant="ghost"
             size="icon"
             onClick={() => handleSubmit(input)}
-            disabled={!input.trim()}
+            disabled={isGenerating || !input.trim()}
             aria-label="Send message"
             className="shrink-0 bg-ai text-copy-primary hover:bg-ai/90"
           >
-            <Send className="size-4" />
+            {isGenerating ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <Send className="size-4" />
+            )}
           </Button>
         </div>
         <p className="mt-2 text-[11px] text-copy-faint">
-          Press Enter to send, Shift + Enter for a new line.
+          {isGenerating
+            ? "Ghost AI is working — the composer is paused for everyone in this room."
+            : "Press Enter to send, Shift + Enter for a new line."}
         </p>
       </div>
     </>

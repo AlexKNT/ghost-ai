@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
+import { LiveblocksProvider, RoomProvider } from "@liveblocks/react"
 
 import { WorkspaceNavbar } from "@/components/editor/workspace-navbar"
 import { ProjectSidebar } from "@/components/editor/project-sidebar"
@@ -72,54 +73,61 @@ export function WorkspaceShell({
   }, [])
 
   return (
-    <div className="flex h-screen flex-col bg-base overflow-hidden">
-      <WorkspaceNavbar
-        projectName={projectName}
-        sidebarOpen={sidebarOpen}
-        aiPanelOpen={aiPanelOpen}
-        saveStatus={saveStatus}
-        onToggleSidebar={toggleSidebar}
-        onToggleAiPanel={toggleAiPanel}
-        onOpenShare={() => setShareOpen(true)}
-        onOpenTemplates={() => setTemplatesOpen(true)}
-        onSave={handleManualSave}
-      />
+    <LiveblocksProvider authEndpoint="/api/liveblocks-auth">
+      <RoomProvider
+        id={projectId}
+        initialPresence={{ cursor: null, thinking: false }}
+      >
+        <div className="flex h-screen flex-col bg-base overflow-hidden">
+          <WorkspaceNavbar
+            projectName={projectName}
+            sidebarOpen={sidebarOpen}
+            aiPanelOpen={aiPanelOpen}
+            saveStatus={saveStatus}
+            onToggleSidebar={toggleSidebar}
+            onToggleAiPanel={toggleAiPanel}
+            onOpenShare={() => setShareOpen(true)}
+            onOpenTemplates={() => setTemplatesOpen(true)}
+            onSave={handleManualSave}
+          />
 
-      <ShareDialog
-        open={shareOpen}
-        projectId={projectId}
-        isOwner={isOwner}
-        onClose={() => setShareOpen(false)}
-      />
+          <ShareDialog
+            open={shareOpen}
+            projectId={projectId}
+            isOwner={isOwner}
+            onClose={() => setShareOpen(false)}
+          />
 
-      <StarterTemplatesModal
-        open={templatesOpen}
-        onClose={() => setTemplatesOpen(false)}
-        onImport={handleImportTemplate}
-      />
+          <StarterTemplatesModal
+            open={templatesOpen}
+            onClose={() => setTemplatesOpen(false)}
+            onImport={handleImportTemplate}
+          />
 
-      {/* Left sidebar — floats over canvas */}
-      <ProjectSidebar
-        isOpen={sidebarOpen}
-        onClose={closeSidebar}
-        ownedProjects={ownedProjects}
-        sharedProjects={sharedProjects}
-        currentRoomId={projectId}
-        onSelectProject={handleSelectProject}
-      />
+          {/* Left sidebar — floats over canvas */}
+          <ProjectSidebar
+            isOpen={sidebarOpen}
+            onClose={closeSidebar}
+            ownedProjects={ownedProjects}
+            sharedProjects={sharedProjects}
+            currentRoomId={projectId}
+            onSelectProject={handleSelectProject}
+          />
 
-      {/* Central canvas — full viewport, sidebars float on top */}
-      <main className="flex-1 pt-14">
-        <CanvasWrapper
-          projectId={projectId}
-          onSaveStatusChange={setSaveStatus}
-          saveTriggerRef={saveTriggerRef}
-          importTemplateRef={importTemplateRef}
-        />
-      </main>
+          {/* Central canvas — full viewport, sidebars float on top */}
+          <main className="flex-1 pt-14">
+            <CanvasWrapper
+              projectId={projectId}
+              onSaveStatusChange={setSaveStatus}
+              saveTriggerRef={saveTriggerRef}
+              importTemplateRef={importTemplateRef}
+            />
+          </main>
 
-      {/* AI sidebar — floats over canvas */}
-      <AISidebar isOpen={aiPanelOpen} onClose={closeAiPanel} />
-    </div>
+          {/* AI sidebar — floats over canvas, shares the room connection */}
+          <AISidebar isOpen={aiPanelOpen} onClose={closeAiPanel} />
+        </div>
+      </RoomProvider>
+    </LiveblocksProvider>
   )
 }

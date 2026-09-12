@@ -50,6 +50,62 @@ export const aiStatusMessageSchema = z.object({
 export type AiStatusMessage = z.infer<typeof aiStatusMessageSchema>
 
 /* -------------------------------------------------------------------------- */
+/*  AI status feed readers                                                    */
+/* -------------------------------------------------------------------------- */
+
+/** Statuses that mean the agent is still working on the room. */
+const ACTIVE_DESIGN_RUN_STATUSES: readonly DesignRunStatus[] = [
+  "queued",
+  "thinking",
+  "applying",
+]
+
+/** True while a run is queued, thinking, or applying changes. */
+export function isDesignRunActive(
+  status: DesignRunStatus | undefined,
+): boolean {
+  return status !== undefined && ACTIVE_DESIGN_RUN_STATUSES.includes(status)
+}
+
+/**
+ * The minimum shape of a raw feed message needed to read its status payload.
+ * `data` is untrusted — Liveblocks stores whatever the producer published.
+ */
+export interface AiStatusFeedEntry {
+  data: unknown
+  /** Feed message creation time, in milliseconds since epoch. */
+  createdAt: number
+}
+
+/**
+ * Picks the most recent valid `ai-status-feed` message, or `null` when the feed
+ * is empty or every message failed validation.
+ *
+ * Messages are ranked by the producer-set `updatedAt`, falling back to the
+ * Liveblocks `createdAt`, so the newest message wins regardless of the order
+ * the feed returns them in. Invalid payloads are dropped rather than displayed.
+ */
+export function selectLatestAiStatus(
+  messages: readonly AiStatusFeedEntry[],
+): AiStatusMessage | null {
+  let latest: AiStatusMessage | null = null
+  let latestRank = Number.NEGATIVE_INFINITY
+
+  for (const message of messages) {
+    const parsed = aiStatusMessageSchema.safeParse(message.data)
+    if (!parsed.success) continue
+
+    const rank = parsed.data.updatedAt ?? message.createdAt
+    if (latest === null || rank >= latestRank) {
+      latest = parsed.data
+      latestRank = rank
+    }
+  }
+
+  return latest
+}
+
+/* -------------------------------------------------------------------------- */
 /*  Design plan (structured output of the design agent)                       */
 /* -------------------------------------------------------------------------- */
 

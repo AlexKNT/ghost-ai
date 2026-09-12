@@ -15,8 +15,6 @@ import "@xyflow/react/dist/style.css"
 import "@liveblocks/react-flow/styles.css"
 
 import {
-  LiveblocksProvider,
-  RoomProvider,
   ClientSideSuspense,
   useUpdateMyPresence,
 } from "@liveblocks/react"
@@ -30,6 +28,7 @@ import { CanvasEdge } from "@/components/editor/canvas-edge"
 import { ShapePanel } from "@/components/editor/shape-panel"
 import { CanvasControls } from "@/components/editor/canvas-controls"
 import { PresenceAvatars } from "@/components/editor/presence-avatars"
+import { ThinkingCursor } from "@/components/editor/thinking-cursor"
 import { DEFAULT_NODE_COLOR } from "@/types/canvas"
 import type { CanvasTemplate } from "@/components/editor/starter-templates"
 
@@ -39,6 +38,9 @@ import type { CanvasTemplate } from "@/components/editor/starter-templates"
 
 const nodeTypes = { canvasNode: CanvasNode }
 const edgeTypes = { canvasEdge: CanvasEdge }
+
+// Stable identity so `<Cursors />` never re-mounts the cursor components.
+const cursorComponents = { Cursor: ThinkingCursor }
 
 /* -------------------------------------------------------------------------- */
 /*  Fallback components                                                       */
@@ -337,7 +339,7 @@ function CanvasInner({
           nodeColor={DEFAULT_NODE_COLOR.fill}
           maskColor="rgba(8,8,9,0.7)"
         />
-        <Cursors />
+        <Cursors components={cursorComponents} />
       </ReactFlow>
 
       {/* Presence avatars — top-right corner of canvas */}
@@ -353,7 +355,7 @@ function CanvasInner({
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Canvas wrapper (provides Liveblocks + ReactFlow context)                  */
+/*  Canvas wrapper (renders inside the workspace room provider)               */
 /* -------------------------------------------------------------------------- */
 
 interface CanvasWrapperProps {
@@ -366,6 +368,11 @@ interface CanvasWrapperProps {
 const noopRef: React.MutableRefObject<(() => void) | null> = { current: null }
 const noopImportRef: React.MutableRefObject<((template: CanvasTemplate) => void) | null> = { current: null }
 
+/**
+ * Renders the collaborative canvas. The `LiveblocksProvider` / `RoomProvider`
+ * pair lives in the workspace shell so the room-scoped AI sidebar shares the
+ * same room connection instead of opening a second one.
+ */
 export function CanvasWrapper({
   projectId,
   onSaveStatusChange,
@@ -373,24 +380,17 @@ export function CanvasWrapper({
   importTemplateRef,
 }: CanvasWrapperProps) {
   return (
-    <LiveblocksProvider authEndpoint="/api/liveblocks-auth">
-      <RoomProvider
-        id={projectId}
-        initialPresence={{ cursor: null, thinking: false }}
-      >
-        <ErrorBoundary fallback={<CanvasError />}>
-          <ClientSideSuspense fallback={<CanvasLoading />}>
-            <ReactFlowProvider>
-              <CanvasInner
-                projectId={projectId}
-                onSaveStatusChange={onSaveStatusChange ?? (() => {})}
-                saveTriggerRef={saveTriggerRef ?? noopRef}
-                importTemplateRef={importTemplateRef ?? noopImportRef}
-              />
-            </ReactFlowProvider>
-          </ClientSideSuspense>
-        </ErrorBoundary>
-      </RoomProvider>
-    </LiveblocksProvider>
+    <ErrorBoundary fallback={<CanvasError />}>
+      <ClientSideSuspense fallback={<CanvasLoading />}>
+        <ReactFlowProvider>
+          <CanvasInner
+            projectId={projectId}
+            onSaveStatusChange={onSaveStatusChange ?? (() => {})}
+            saveTriggerRef={saveTriggerRef ?? noopRef}
+            importTemplateRef={importTemplateRef ?? noopImportRef}
+          />
+        </ReactFlowProvider>
+      </ClientSideSuspense>
+    </ErrorBoundary>
   )
 }
