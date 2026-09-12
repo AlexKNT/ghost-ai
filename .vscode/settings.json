@@ -11,6 +11,9 @@
             "approve": true,
             "matchCommandLine": true
         },
-        "Get-Process": true
+        "Get-Process": true,
+        "Test-Path": true,
+        "ForEach-Object": true,
+        "ConvertFrom-Json": true
     }
 }

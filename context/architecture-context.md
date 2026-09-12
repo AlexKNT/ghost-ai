@@ -50,8 +50,10 @@
 ### Design Generation
 
 - Input: user prompt, project context, and current canvas state.
-- Execution: durable background task via Trigger.dev.
+- Execution: durable background task via Trigger.dev. The task reads the canvas through the Liveblocks node client and writes its change set with `liveblocks.mutateStorage`, mutating the same storage document `useLiveblocksFlow` owns — no parallel canvas state.
 - Output: structured node and edge updates written into the shared Liveblocks room.
+- Visibility: the agent publishes progress to the room-scoped `ai-status-feed` Liveblocks feed and appears as a participant through ephemeral presence (`thinking` + cursor), so collaborators see it work in real time.
+- The model only proposes changes. The task validates them first: shapes and colors are constrained to the canvas palette, geometry is snapped to the canvas grid, and deletes never leave dangling edges.
 
 ### Spec Generation
 

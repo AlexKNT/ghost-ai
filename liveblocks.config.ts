@@ -1,4 +1,6 @@
-import type { LiveList, LiveObject } from "@liveblocks/client"
+import type { LiveMap, LiveObject } from "@liveblocks/client"
+
+import type { CanvasEdgeData, CanvasNodeData } from "@/types/canvas"
 
 /* -------------------------------------------------------------------------- */
 /*  Presence                                                                  */
@@ -21,6 +23,44 @@ export type UserMeta = {
 }
 
 /* -------------------------------------------------------------------------- */
+/*  Storage (collaborative canvas state)                                      */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The canvas is stored under the `flow` key by `useLiveblocksFlow` from
+ * `@liveblocks/react-flow`: a LiveMap of nodes and a LiveMap of edges keyed by
+ * id. `position` and other React Flow geometry are stored as plain values,
+ * while `data` is a nested LiveObject.
+ *
+ * This is deliberately not declared on the global `Liveblocks` interface:
+ * doing so would make `initialStorage` a required prop of `RoomProvider`, while
+ * the flow hook already initializes the document on connect.
+ */
+export type FlowNode = {
+  id: string
+  type: string
+  position: { x: number; y: number }
+  data: LiveObject<CanvasNodeData>
+}
+
+export type FlowEdge = {
+  id: string
+  source: string
+  target: string
+  type: string
+  data: LiveObject<CanvasEdgeData>
+}
+
+export type FlowDiagram = LiveObject<{
+  nodes: LiveMap<string, LiveObject<FlowNode>>
+  edges: LiveMap<string, LiveObject<FlowEdge>>
+}>
+
+export type Storage = {
+  flow: FlowDiagram
+}
+
+/* -------------------------------------------------------------------------- */
 /*  Global type augmentation (for hook inference)                             */
 /* -------------------------------------------------------------------------- */
 
@@ -29,43 +69,4 @@ declare global {
     Presence: Presence
     UserMeta: UserMeta
   }
-}
-
-/* -------------------------------------------------------------------------- */
-/*  Storage (collaborative canvas state)                                      */
-/* -------------------------------------------------------------------------- */
-
-export type CanvasNodeData = {
-  label: string
-  color: string
-  textColor: string
-  shape: string
-  width: number
-  height: number
-}
-
-export type CanvasEdgeData = {
-  label: string
-}
-
-export type Storage = {
-  nodes: LiveList<LiveObject<CanvasNode>>
-  edges: LiveList<LiveObject<CanvasEdge>>
-}
-
-/* These are the shape of objects inside the LiveLists */
-export type CanvasNode = {
-  id: string
-  type: string
-  position: { x: number; y: number }
-  data: CanvasNodeData
-}
-
-export type CanvasEdge = {
-  id: string
-  source: string
-  target: string
-  sourceHandle?: string
-  targetHandle?: string
-  data: CanvasEdgeData
 }
