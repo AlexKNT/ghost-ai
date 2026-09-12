@@ -21,6 +21,7 @@ npm run test:watch  # watch mode
 | `starter-templates.test.ts` | Template snapshots satisfy the same schema as user-created content     |
 | `task-schemas.test.ts`      | Zod schemas for the status feed and structured model output            |
 | `ai-status.test.ts`         | Latest-message selection from the `ai-status-feed` payloads            |
+| `ai-chat.test.ts`           | Chat message validation and ordering for the `ai-chat` feed            |
 | `project-access.test.ts`    | Ownership and collaborator access checks with Clerk/Prisma doubles     |
 | `liveblocks-color.test.ts`  | Deterministic collaborator colors                                     |
 

@@ -1,14 +1,26 @@
 "use client"
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react"
-import { Bot, Download, FileText, Loader2, Send, Sparkles, X } from "lucide-react"
+import { useSelf } from "@liveblocks/react"
+import {
+  AlertCircle,
+  Bot,
+  Download,
+  FileText,
+  Loader2,
+  Send,
+  Sparkles,
+  X,
+} from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useAiChatFeed } from "@/hooks/useAiChatFeed"
 import { useAiStatusFeed } from "@/hooks/useAiStatusFeed"
-import type { DesignRunStatus } from "@/types/tasks"
+import type { ChatMessage, DesignRunStatus } from "@/types/tasks"
+import type { UserMeta } from "@/liveblocks.config"
 
 /* -------------------------------------------------------------------------- */
 /*  Types                                                                     */
@@ -19,13 +31,8 @@ interface AISidebarProps {
   onClose: () => void
 }
 
-type ChatRole = "user" | "assistant"
-
-interface ChatMessage {
-  id: string
-  role: ChatRole
-  content: string
-}
+/** Shown in place of the display name on the reader's own messages. */
+const SELF_LABEL = "You"
 
 /* -------------------------------------------------------------------------- */
 /*  Constants                                                                 */
@@ -64,17 +71,42 @@ const TAB_TRIGGER_CLASS =
 /*  Chat                                                                      */
 /* -------------------------------------------------------------------------- */
 
-function ChatBubble({ message }: { message: ChatMessage }) {
-  const isUser = message.role === "user"
+function ChatBubble({
+  message,
+  isOwn,
+}: {
+  message: ChatMessage
+  isOwn: boolean
+}) {
+  const isAssistant = message.role === "assistant"
+  const sentAt = new Date(message.timestamp)
 
   return (
-    <div className={cn("flex", isUser ? "justify-end" : "justify-start")}>
+    <div
+      className={cn(
+        "flex flex-col gap-1",
+        isOwn ? "items-end" : "items-start",
+      )}
+    >
+      <div className="flex items-center gap-2 px-1 text-[11px] text-copy-faint">
+        <span className="max-w-40 truncate font-medium text-copy-muted">
+          {isOwn ? SELF_LABEL : message.sender}
+        </span>
+        <time dateTime={sentAt.toISOString()}>
+          {sentAt.toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </time>
+      </div>
       <div
         className={cn(
           "max-w-[85%] rounded-2xl px-3 py-2 text-sm break-words whitespace-pre-wrap",
-          isUser
-            ? "border-2 border-brand/50 bg-accent-dim text-copy-primary"
-            : "border border-surface-border bg-elevated text-ai-text",
+          isAssistant
+            ? "border border-ai/40 bg-ai/10 text-ai-text"
+            : isOwn
+              ? "border-2 border-brand/50 bg-accent-dim text-copy-primary"
+              : "border border-surface-border bg-elevated text-copy-primary",
         )}
       >
         {message.content}
@@ -117,11 +149,20 @@ function AiEmptyState({
 }
 
 function AiArchitectTab() {
-  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState("")
 
-  // Shared AI activity, published to every participant through the room feed.
+  // Shared AI activity, published to every participant through the status feed.
   const { message, isGenerating } = useAiStatusFeed()
+
+  // Collaborative chat, published to every participant through the chat feed.
+  const { messages, sendMessage, isSending, error } = useAiChatFeed()
+
+  // Presence-backed identity, so every message carries a readable sender.
+  // `info` is untyped on the base user meta, so it is narrowed here the same
+  // way the presence avatars and cursors do it.
+  const self = useSelf()
+  const selfInfo = self?.info as UserMeta | undefined
+  const selfName = selfInfo?.name ?? SELF_LABEL
 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -145,26 +186,32 @@ function AiArchitectTab() {
     el.scrollTop = el.scrollHeight
   }, [messages])
 
-  const handleSubmit = (value: string) => {
+  const handleSubmit = async (value: string) => {
     // Generation is shared state — everyone in the room is paused while it runs.
     if (isGenerating) return
 
     const content = value.trim()
     if (!content) return
 
-    setMessages((prev) => [
-      ...prev,
-      { id: crypto.randomUUID(), role: "user", content },
-    ])
-    setInput("")
+    const sent = await sendMessage({
+      sender: selfName,
+      role: "user",
+      content,
+      timestamp: Date.now(),
+    })
+
+    // Keep the draft on failure so the user can retry without retyping.
+    if (sent) setInput("")
   }
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault()
-      handleSubmit(input)
+      void handleSubmit(input)
     }
   }
+
+  const isBusy = isGenerating || isSending
 
   // Only the most recent status message is shown, and only if it says something.
   const statusText =
@@ -179,8 +226,12 @@ function AiArchitectTab() {
           <AiEmptyState onSelectPrompt={handleSubmit} />
         ) : (
           <div className="flex flex-col gap-3">
-            {messages.map((message) => (
-              <ChatBubble key={message.id} message={message} />
+            {messages.map((chatMessage) => (
+              <ChatBubble
+                key={chatMessage.id}
+                message={chatMessage}
+                isOwn={chatMessage.sender === selfName}
+              />
             ))}
           </div>
         )}
@@ -215,6 +266,22 @@ function AiArchitectTab() {
           </div>
         )}
 
+        {error && (
+          <div
+            role="alert"
+            className={cn(
+              "mb-2 flex items-start gap-2 rounded-xl border px-2.5 py-2 text-xs",
+              "border-error/40 bg-error/10 text-error",
+            )}
+          >
+            <AlertCircle
+              className="mt-px size-3.5 shrink-0"
+              aria-hidden="true"
+            />
+            <span className="min-w-0 flex-1 break-words">{error}</span>
+          </div>
+        )}
+
         <div className="flex items-end gap-2">
           <Textarea
             ref={textareaRef}
@@ -233,12 +300,12 @@ function AiArchitectTab() {
             type="button"
             variant="ghost"
             size="icon"
-            onClick={() => handleSubmit(input)}
-            disabled={isGenerating || !input.trim()}
+            onClick={() => void handleSubmit(input)}
+            disabled={isBusy || !input.trim()}
             aria-label="Send message"
             className="shrink-0 bg-ai text-copy-primary hover:bg-ai/90"
           >
-            {isGenerating ? (
+            {isBusy ? (
               <Loader2 className="size-4 animate-spin" aria-hidden="true" />
             ) : (
               <Send className="size-4" />

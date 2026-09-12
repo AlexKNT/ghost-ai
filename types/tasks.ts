@@ -68,13 +68,18 @@ export function isDesignRunActive(
 }
 
 /**
- * The minimum shape of a raw feed message needed to read its status payload.
+ * The minimum shape of a raw feed message needed to read its payload.
  * `data` is untrusted — Liveblocks stores whatever the producer published.
  */
-export interface AiStatusFeedEntry {
+export interface FeedEntry {
   data: unknown
   /** Feed message creation time, in milliseconds since epoch. */
   createdAt: number
+}
+
+/** A feed entry that also carries the id Liveblocks assigned to it. */
+export interface IdentifiedFeedEntry extends FeedEntry {
+  id: string
 }
 
 /**
@@ -86,7 +91,7 @@ export interface AiStatusFeedEntry {
  * the feed returns them in. Invalid payloads are dropped rather than displayed.
  */
 export function selectLatestAiStatus(
-  messages: readonly AiStatusFeedEntry[],
+  messages: readonly FeedEntry[],
 ): AiStatusMessage | null {
   let latest: AiStatusMessage | null = null
   let latestRank = Number.NEGATIVE_INFINITY
@@ -103,6 +108,76 @@ export function selectLatestAiStatus(
   }
 
   return latest
+}
+
+/* -------------------------------------------------------------------------- */
+/*  AI chat feed message                                                      */
+/* -------------------------------------------------------------------------- */
+
+/** Who authored a chat message. Reserved for future AI replies. */
+export const CHAT_ROLE_VALUES = ["user", "assistant"] as const
+
+export const chatRoleSchema = z.enum(CHAT_ROLE_VALUES)
+
+export type ChatRole = z.infer<typeof chatRoleSchema>
+
+/**
+ * Payload published to the room-scoped `ai-chat` feed.
+ *
+ * Chat is deliberately separate from `ai-status-feed`: status messages are
+ * machine progress reports where only the newest one matters, while chat
+ * messages are conversation that must all be kept and rendered in order.
+ */
+export const aiChatMessageSchema = z.object({
+  /** Display name of the participant that sent the message. */
+  sender: z.string().min(1),
+  role: chatRoleSchema,
+  content: z.string().min(1),
+  /** Milliseconds since epoch, set by the producer. */
+  timestamp: z.number(),
+})
+
+export type AiChatMessage = z.infer<typeof aiChatMessageSchema>
+
+/** A validated chat message plus the id Liveblocks assigned to it. */
+export interface ChatMessage extends AiChatMessage {
+  id: string
+}
+
+/* -------------------------------------------------------------------------- */
+/*  AI chat feed reader                                                       */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Validates every raw `ai-chat` feed entry and returns the messages that pass,
+ * oldest first.
+ *
+ * Invalid payloads are dropped rather than rendered. Ordering uses the
+ * producer-set `timestamp` (with the Liveblocks `createdAt` as a tiebreaker) so
+ * every participant renders the same conversation order.
+ */
+export function selectChatMessages(
+  entries: readonly IdentifiedFeedEntry[],
+): ChatMessage[] {
+  const ranked: { message: ChatMessage; receivedAt: number }[] = []
+
+  for (const entry of entries) {
+    const parsed = aiChatMessageSchema.safeParse(entry.data)
+    if (!parsed.success) continue
+
+    ranked.push({
+      message: { id: entry.id, ...parsed.data },
+      receivedAt: entry.createdAt,
+    })
+  }
+
+  ranked.sort(
+    (a, b) =>
+      a.message.timestamp - b.message.timestamp ||
+      a.receivedAt - b.receivedAt,
+  )
+
+  return ranked.map(({ message }) => message)
 }
 
 /* -------------------------------------------------------------------------- */
