@@ -22,6 +22,8 @@ All colors are defined as CSS custom properties in `globals.css` and mapped to T
 | Brand dim        | `--accent-primary-dim` | `rgba(0, 200, 212, 0.12)` |
 | AI accent        | `--accent-ai`          | `#6457f9` (indigo-purple) |
 | AI text          | `--accent-ai-text`     | `#8b82ff`                 |
+| Green accent     | `--accent-green`       | `#62C073`                 |
+| Green accent text| `--accent-green-text`  | `#0F2E18`                 |
 | Error            | `--state-error`        | `#ff4d4f`                 |
 | Success          | `--state-success`      | `#34d399`                 |
 | Warning          | `--state-warning`      | `#fbbf24`                 |

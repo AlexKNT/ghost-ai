@@ -13,6 +13,16 @@ export const AI_STATUS_FEED_ID = "ai-status-feed"
 export const AI_CHAT_FEED_ID = "ai-chat"
 
 /* -------------------------------------------------------------------------- */
+/*  AI collaborator identity                                                  */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Display name shared by the AI agent's presence and the messages it authors,
+ * so the collaborator badge and the conversation show the same author.
+ */
+export const AI_ASSISTANT_NAME = "Ghost AI"
+
+/* -------------------------------------------------------------------------- */
 /*  Design run lifecycle                                                      */
 /* -------------------------------------------------------------------------- */
 
@@ -178,6 +188,110 @@ export function selectChatMessages(
   )
 
   return ranked.map(({ message }) => message)
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Design run tracking (client side)                                         */
+/*                                                                           */
+/*  A submitted prompt starts a Trigger.dev run. The client tracks it through */
+/*  `useRealtimeRun`, so the rules for "is it still running" and "what does   */
+/*  the room get told when it ends" live here as pure functions.             */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Trigger.dev run statuses a run can never leave. Mirrors the `RunStatus` enum
+ * the realtime subscription reports; anything else means the agent is busy.
+ */
+export const TERMINAL_DESIGN_RUN_STATUSES = [
+  "COMPLETED",
+  "CANCELED",
+  "FAILED",
+  "CRASHED",
+  "SYSTEM_FAILURE",
+  "EXPIRED",
+  "TIMED_OUT",
+] as const
+
+/** True once a run has stopped for good, successfully or not. */
+export function isTerminalDesignRunStatus(status: string): boolean {
+  return (TERMINAL_DESIGN_RUN_STATUSES as readonly string[]).includes(status)
+}
+
+/** The design task's return value, as far as the client trusts it. */
+export const designRunOutputSchema = z.object({
+  summary: z.string().optional(),
+})
+
+/** What the sidebar says in the conversation once a run stops being active. */
+export interface DesignRunOutcome {
+  kind: "complete" | "error"
+  message: string
+}
+
+/** Copy used when the run itself gives nothing better to show. */
+const COMPLETE_MESSAGE = "Design applied to the canvas."
+const CANCELED_MESSAGE = "Design generation was canceled."
+const FAILED_MESSAGE = "Design generation failed."
+const START_FAILED_MESSAGE = "The design run couldn't be started."
+
+const DEFAULT_ERROR_MESSAGE = "The design run stopped before it could finish."
+
+/** The pieces of a finished run the client needs to explain the outcome. */
+export interface DesignRunOutcomeInput {
+  status: string
+  /** Raw task output — untrusted, validated before it is read. */
+  output?: unknown
+  /** Error message the run reported, if any. */
+  errorMessage?: string | null
+}
+
+/**
+ * Turns a finished run into the single message the sidebar publishes to the
+ * room, so collaborators read the outcome instead of a status code. The summary
+ * comes from the task's own output whenever it is usable.
+ */
+export function describeDesignRunOutcome({
+  status,
+  output,
+  errorMessage,
+}: DesignRunOutcomeInput): DesignRunOutcome {
+  if (status === "COMPLETED") {
+    const parsed = designRunOutputSchema.safeParse(output)
+    const summary = parsed.success ? parsed.data.summary?.trim() : undefined
+
+    return { kind: "complete", message: summary || COMPLETE_MESSAGE }
+  }
+
+  if (status === "CANCELED") {
+    return { kind: "error", message: CANCELED_MESSAGE }
+  }
+
+  const detail = errorMessage?.trim()
+  if (!detail) return { kind: "error", message: DEFAULT_ERROR_MESSAGE }
+
+  return {
+    kind: "error",
+    message: detail.startsWith(FAILED_MESSAGE)
+      ? detail
+      : `${FAILED_MESSAGE} ${detail}`,
+  }
+}
+
+/**
+ * Outcome for a run that never reached the queue (auth, network or server
+ * failure), so a failed submit reads like every other run failure.
+ */
+export function describeDesignRunStartFailure(
+  detail?: string | null,
+): DesignRunOutcome {
+  const trimmed = detail?.trim()
+
+  return {
+    kind: "error",
+    message: trimmed
+      ? `${START_FAILED_MESSAGE} ${trimmed}`
+      : START_FAILED_MESSAGE,
+  }
 }
 
 /* -------------------------------------------------------------------------- */

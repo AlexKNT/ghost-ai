@@ -1,5 +1,6 @@
 import { getLiveblocks } from "@/lib/liveblocks"
 import {
+  AI_ASSISTANT_NAME,
   AI_STATUS_FEED_ID,
   aiStatusMessageSchema,
   type AiStatusMessage,
@@ -15,7 +16,7 @@ import {
  * instead of a new one per run.
  */
 export const AI_AGENT_ID = "ghost-ai-agent"
-export const AI_AGENT_NAME = "Ghost AI"
+export const AI_AGENT_NAME = AI_ASSISTANT_NAME
 export const AI_AGENT_COLOR = "#6457f9"
 
 /** Presence expires on its own; each update refreshes the window. */

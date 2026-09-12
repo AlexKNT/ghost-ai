@@ -1,6 +1,12 @@
 "use client"
 
-import { useEffect, useRef, useState, type KeyboardEvent } from "react"
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react"
 import { useSelf } from "@liveblocks/react"
 import {
   AlertCircle,
@@ -19,7 +25,14 @@ import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAiChatFeed } from "@/hooks/useAiChatFeed"
 import { useAiStatusFeed } from "@/hooks/useAiStatusFeed"
-import type { ChatMessage, DesignRunStatus } from "@/types/tasks"
+import { useDesignRun } from "@/hooks/useDesignRun"
+import {
+  AI_ASSISTANT_NAME,
+  describeDesignRunStartFailure,
+  type ChatMessage,
+  type DesignRunOutcome,
+  type DesignRunStatus,
+} from "@/types/tasks"
 import type { UserMeta } from "@/liveblocks.config"
 
 /* -------------------------------------------------------------------------- */
@@ -29,6 +42,8 @@ import type { UserMeta } from "@/liveblocks.config"
 interface AISidebarProps {
   isOpen: boolean
   onClose: () => void
+  /** Room the sidebar works in — the project id doubles as the room id. */
+  projectId: string
 }
 
 /** Shown in place of the display name on the reader's own messages. */
@@ -55,6 +70,9 @@ const STATUS_LABELS: Record<DesignRunStatus, string> = {
   complete: "Generation complete",
   error: "Generation failed",
 }
+
+/** Shown while the run has started but has not reported anything yet. */
+const STARTING_STATUS_LABEL = "Submitting your request…"
 
 const DEMO_SPEC = {
   title: "System Architecture Spec",
@@ -89,7 +107,15 @@ function ChatBubble({
       )}
     >
       <div className="flex items-center gap-2 px-1 text-[11px] text-copy-faint">
-        <span className="max-w-40 truncate font-medium text-copy-muted">
+        {isAssistant && (
+          <Bot className="size-3 shrink-0 text-ai-text" aria-hidden="true" />
+        )}
+        <span
+          className={cn(
+            "max-w-40 truncate font-medium",
+            isAssistant ? "text-ai-text" : "text-copy-muted",
+          )}
+        >
           {isOwn ? SELF_LABEL : message.sender}
         </span>
         <time dateTime={sentAt.toISOString()}>
@@ -103,9 +129,9 @@ function ChatBubble({
         className={cn(
           "max-w-[85%] rounded-2xl px-3 py-2 text-sm break-words whitespace-pre-wrap",
           isAssistant
-            ? "border border-ai/40 bg-ai/10 text-ai-text"
+            ? "border border-surface-border bg-elevated text-copy-primary"
             : isOwn
-              ? "border-2 border-brand/50 bg-accent-dim text-copy-primary"
+              ? "bg-green text-green-text"
               : "border border-surface-border bg-elevated text-copy-primary",
         )}
       >
@@ -117,8 +143,10 @@ function ChatBubble({
 
 function AiEmptyState({
   onSelectPrompt,
+  disabled,
 }: {
   onSelectPrompt: (prompt: string) => void
+  disabled: boolean
 }) {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
@@ -134,10 +162,12 @@ function AiEmptyState({
           <button
             key={prompt}
             type="button"
+            disabled={disabled}
             onClick={() => onSelectPrompt(prompt)}
             className={cn(
               "rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
               "bg-subtle text-ai-text hover:bg-elevated",
+              "disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-subtle",
             )}
           >
             {prompt}
@@ -148,7 +178,7 @@ function AiEmptyState({
   )
 }
 
-function AiArchitectTab() {
+function AiArchitectTab({ projectId }: { projectId: string }) {
   const [input, setInput] = useState("")
 
   // Shared AI activity, published to every participant through the status feed.
@@ -166,6 +196,30 @@ function AiArchitectTab() {
 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  // The AI reports back in the conversation, so the outcome is visible to the
+  // whole room rather than only to whoever submitted the prompt.
+  const publishOutcome = useCallback(
+    (outcome: DesignRunOutcome) => {
+      void sendMessage({
+        sender: AI_ASSISTANT_NAME,
+        role: "assistant",
+        content: outcome.message,
+        timestamp: Date.now(),
+      })
+    },
+    [sendMessage],
+  )
+
+  // Submits the prompt and follows the background run through Trigger.dev.
+  const { isActive, startRun } = useDesignRun({
+    projectId,
+    onOutcome: publishOutcome,
+  })
+
+  // A run started by anyone in the room pauses the composer for everyone, so
+  // two prompts can never race each other onto the same canvas.
+  const runActive = isActive || isGenerating
 
   // Auto-resize the composer between the min and max heights.
   useEffect(() => {
@@ -187,21 +241,27 @@ function AiArchitectTab() {
   }, [messages])
 
   const handleSubmit = async (value: string) => {
-    // Generation is shared state — everyone in the room is paused while it runs.
-    if (isGenerating) return
+    if (runActive) return
 
     const content = value.trim()
     if (!content) return
 
+    // The prompt joins the shared conversation first: when it cannot be
+    // recorded for the room, no run is started.
     const sent = await sendMessage({
       sender: selfName,
       role: "user",
       content,
       timestamp: Date.now(),
     })
+    if (!sent) return
 
-    // Keep the draft on failure so the user can retry without retyping.
-    if (sent) setInput("")
+    setInput("")
+
+    const started = await startRun(content)
+    if (!started.ok) {
+      publishOutcome(describeDesignRunStartFailure(started.error))
+    }
   }
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -211,19 +271,21 @@ function AiArchitectTab() {
     }
   }
 
-  const isBusy = isGenerating || isSending
+  const isBusy = runActive || isSending
 
-  // Only the most recent status message is shown, and only if it says something.
+  // Only the most recent status message is shown, and only while a run is
+  // active — the outcome itself arrives as an AI message instead.
+  const feedStatus = message?.status
   const statusText =
     message?.text?.trim() ||
-    (message?.status ? STATUS_LABELS[message.status] : null)
+    (feedStatus ? STATUS_LABELS[feedStatus] : STARTING_STATUS_LABEL)
 
   return (
     <>
       {/* Scrollable chat area */}
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
         {messages.length === 0 ? (
-          <AiEmptyState onSelectPrompt={handleSubmit} />
+          <AiEmptyState onSelectPrompt={handleSubmit} disabled={runActive} />
         ) : (
           <div className="flex flex-col gap-3">
             {messages.map((chatMessage) => (
@@ -239,29 +301,20 @@ function AiArchitectTab() {
 
       {/* Input area */}
       <div className="shrink-0 border-t border-surface-border p-3">
-        {statusText && (
+        {runActive && (
           <div
             role="status"
             aria-live="polite"
-            aria-busy={isGenerating}
+            aria-busy="true"
             className={cn(
               "mb-2 flex items-start gap-2 rounded-xl border px-2.5 py-2 text-xs",
-              isGenerating
-                ? "border-ai/40 bg-ai/10 text-ai-text"
-                : "border-surface-border bg-elevated text-copy-muted",
+              "border-green/40 bg-green/10 text-green",
             )}
           >
-            {isGenerating ? (
-              <Loader2
-                className="mt-px size-3.5 shrink-0 animate-spin"
-                aria-hidden="true"
-              />
-            ) : (
-              <Sparkles
-                className="mt-px size-3.5 shrink-0"
-                aria-hidden="true"
-              />
-            )}
+            <Loader2
+              className="mt-px size-3.5 shrink-0 animate-spin"
+              aria-hidden="true"
+            />
             <span className="min-w-0 flex-1 break-words">{statusText}</span>
           </div>
         )}
@@ -288,7 +341,7 @@ function AiArchitectTab() {
             value={input}
             onChange={(event) => setInput(event.target.value)}
             onKeyDown={handleKeyDown}
-            disabled={isGenerating}
+            disabled={runActive}
             placeholder="Describe your system design..."
             aria-label="Message Ghost AI"
             className={cn(
@@ -303,7 +356,7 @@ function AiArchitectTab() {
             onClick={() => void handleSubmit(input)}
             disabled={isBusy || !input.trim()}
             aria-label="Send message"
-            className="shrink-0 bg-ai text-copy-primary hover:bg-ai/90"
+            className="shrink-0 bg-green text-green-text hover:bg-green/90 hover:text-green-text"
           >
             {isBusy ? (
               <Loader2 className="size-4 animate-spin" aria-hidden="true" />
@@ -313,7 +366,7 @@ function AiArchitectTab() {
           </Button>
         </div>
         <p className="mt-2 text-[11px] text-copy-faint">
-          {isGenerating
+          {runActive
             ? "Ghost AI is working — the composer is paused for everyone in this room."
             : "Press Enter to send, Shift + Enter for a new line."}
         </p>
@@ -380,7 +433,7 @@ function SpecsTab() {
 /*  Sidebar                                                                   */
 /* -------------------------------------------------------------------------- */
 
-export function AISidebar({ isOpen, onClose }: AISidebarProps) {
+export function AISidebar({ isOpen, onClose, projectId }: AISidebarProps) {
   return (
     <aside
       aria-label="AI workspace"
@@ -438,11 +491,14 @@ export function AISidebar({ isOpen, onClose }: AISidebarProps) {
           </TabsList>
         </div>
 
+        {/* Kept mounted so an in-flight run keeps being tracked while the user
+            looks at the Specs tab. */}
         <TabsContent
           value="architect"
+          keepMounted
           className="flex min-h-0 flex-1 flex-col"
         >
-          <AiArchitectTab />
+          <AiArchitectTab projectId={projectId} />
         </TabsContent>
 
         <TabsContent value="specs" className="flex min-h-0 flex-1 flex-col">

@@ -125,7 +125,11 @@ export function WorkspaceShell({
           </main>
 
           {/* AI sidebar — floats over canvas, shares the room connection */}
-          <AISidebar isOpen={aiPanelOpen} onClose={closeAiPanel} />
+          <AISidebar
+            isOpen={aiPanelOpen}
+            onClose={closeAiPanel}
+            projectId={projectId}
+          />
         </div>
       </RoomProvider>
     </LiveblocksProvider>
