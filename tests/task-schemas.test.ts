@@ -141,14 +141,9 @@ describe("designPlanSchema", () => {
 /* -------------------------------------------------------------------------- */
 
 describe("specGenerationRequestSchema", () => {
-  it("requires a room and defaults the canvas inputs to empty arrays", () => {
-    const parsed = specGenerationRequestSchema.parse({ roomId: "proj_1" })
-
-    expect(parsed).toEqual({
+  it("accepts only a room", () => {
+    expect(specGenerationRequestSchema.parse({ roomId: "proj_1" })).toEqual({
       roomId: "proj_1",
-      nodes: [],
-      edges: [],
-      chatHistory: [],
     })
     expect(specGenerationRequestSchema.safeParse({}).success).toBe(false)
     expect(
@@ -156,20 +151,49 @@ describe("specGenerationRequestSchema", () => {
     ).toBe(false)
   })
 
-  it("drops a client-supplied project id instead of forwarding it", () => {
+  it("ignores everything a client might try to supply", () => {
     const parsed = specGenerationRequestSchema.parse({
       roomId: "proj_1",
       projectId: "someone-elses-project",
+      nodes: [{ id: "n1", label: "Injected node" }],
+      edges: [{ source: "n1", target: "n2" }],
+      chatHistory: [
+        { sender: "Ada", role: "user", content: "hi", timestamp: 0 },
+      ],
     })
 
-    expect(parsed).not.toHaveProperty("projectId")
+    // The canvas and the conversation are read from the room on the server.
+    expect(parsed).toEqual({ roomId: "proj_1" })
+  })
+})
+
+/* -------------------------------------------------------------------------- */
+/*  Spec task payload (built from the room, never from the client)             */
+/* -------------------------------------------------------------------------- */
+
+describe("specGenerationPayloadSchema", () => {
+  it("requires the project and room the server resolved", () => {
+    expect(
+      specGenerationPayloadSchema.safeParse({ roomId: "proj_1" }).success,
+    ).toBe(false)
+
+    const parsed = specGenerationPayloadSchema.parse({
+      roomId: "proj_1",
+      projectId: "proj_1",
+    })
+
+    expect(parsed.projectId).toBe("proj_1")
+    expect(parsed.nodes).toEqual([])
+    expect(parsed.edges).toEqual([])
+    expect(parsed.chatHistory).toEqual([])
   })
 
-  it("accepts a canvas plus its conversation", () => {
-    const request = {
+  it("carries the canvas read from the room and the conversation", () => {
+    const payload = {
+      projectId: "proj_1",
       roomId: "proj_1",
       nodes: [
-        { id: "n1", label: "API Gateway", shape: "diamond", color: "purple" },
+        { id: "n1", label: "API Gateway", shape: "diamond", color: "#2E1938" },
         { id: "n2", label: "Orders DB", shape: "cylinder" },
       ],
       edges: [{ source: "n1", target: "n2", label: "routes" }],
@@ -183,35 +207,33 @@ describe("specGenerationRequestSchema", () => {
       ],
     }
 
-    const parsed = specGenerationRequestSchema.parse(request)
-
-    expect(parsed.nodes).toEqual(request.nodes)
-    expect(parsed.edges).toEqual(request.edges)
-    expect(parsed.chatHistory).toEqual(request.chatHistory)
+    expect(specGenerationPayloadSchema.parse(payload)).toEqual(payload)
   })
 
   it("rejects shapes outside the canvas vocabulary and broken edges", () => {
-    const base = { roomId: "proj_1" }
+    const base = { projectId: "proj_1", roomId: "proj_1" }
 
     expect(
-      specGenerationRequestSchema.safeParse({
+      specGenerationPayloadSchema.safeParse({
         ...base,
         nodes: [{ id: "n1", label: "A", shape: "triangle" }],
       }).success,
     ).toBe(false)
 
     expect(
-      specGenerationRequestSchema.safeParse({
+      specGenerationPayloadSchema.safeParse({
         ...base,
         edges: [{ source: "n1" }],
       }).success,
     ).toBe(false)
   })
 
-  it("holds chat messages to the shared chat contract", () => {
+  it("holds the conversation to the shared chat contract", () => {
+    const base = { projectId: "proj_1", roomId: "proj_1" }
+
     expect(
-      specGenerationRequestSchema.safeParse({
-        roomId: "proj_1",
+      specGenerationPayloadSchema.safeParse({
+        ...base,
         chatHistory: [
           { sender: "Ada", role: "user", content: "", timestamp: 0 },
         ],
@@ -219,28 +241,12 @@ describe("specGenerationRequestSchema", () => {
     ).toBe(false)
 
     expect(
-      specGenerationRequestSchema.safeParse({
-        roomId: "proj_1",
+      specGenerationPayloadSchema.safeParse({
+        ...base,
         chatHistory: [
           { sender: "Ada", role: "system", content: "hi", timestamp: 0 },
         ],
       }).success,
     ).toBe(false)
-  })
-})
-
-describe("specGenerationPayloadSchema", () => {
-  it("requires the project resolved on the server", () => {
-    expect(
-      specGenerationPayloadSchema.safeParse({ roomId: "proj_1" }).success,
-    ).toBe(false)
-
-    const parsed = specGenerationPayloadSchema.parse({
-      roomId: "proj_1",
-      projectId: "proj_1",
-    })
-
-    expect(parsed.projectId).toBe("proj_1")
-    expect(parsed.nodes).toEqual([])
   })
 })

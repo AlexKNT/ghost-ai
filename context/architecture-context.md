@@ -57,7 +57,8 @@
 
 ### Spec Generation
 
-- Input: the current canvas graph and the room's conversation, validated at the API boundary and carried with the run payload.
+- Input: the room's own canvas graph and conversation. `POST /api/ai/spec` accepts only a room id, resolves access from it, and reads both halves server-side — a spec cannot be generated from content a client chose, and the input cannot be stale.
+- Trigger: the editor's Specs tab starts a run. The button reports progress, is paused room-wide while any AI run is active, and any finished run refreshes the list. An empty canvas is refused before a run is spent.
 - Execution: durable background task via Trigger.dev (`generate-spec`), using the same Gemini model as the design agent. It writes nothing back to the room and reports progress through the room's `ai-status-feed`, so collaborators see spec generation the same way they see a design run.
 - Output: a Markdown technical spec. Before the run reports success the document is uploaded to Vercel Blob at `specs/{projectId}/{specId}.md` and recorded as a `ProjectSpec` row holding that reference; the run also returns the Markdown and the record id.
 - Surface: the editor's Specs tab lists a project's specs (metadata only — never the blob reference), previews one as rendered Markdown, and downloads it. Every read goes through the app's own authenticated routes: `GET /api/projects/[projectId]/specs` for metadata and `GET /api/projects/[projectId]/specs/[specId]/download` for the document, so a Blob URL never reaches the client.

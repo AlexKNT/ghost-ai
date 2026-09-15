@@ -6,6 +6,8 @@ import { AlertCircle, Download, FileText, Loader2, Sparkles } from "lucide-react
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { SpecPreviewDialog } from "@/components/editor/spec-preview-dialog"
+import { useAiStatusFeed } from "@/hooks/useAiStatusFeed"
+import { useSpecRun } from "@/hooks/useSpecRun"
 import {
   formatSpecDate,
   specFileUrl,
@@ -86,19 +88,59 @@ function SpecListItem({
  * the Markdown on demand and holds it only while it is open.
  */
 export function SpecsTab({ projectId }: { projectId: string }) {
-  const { specs, isLoading, error, loadContent } = useProjectSpecs(projectId)
+  const {
+    specs,
+    isLoading,
+    error: listError,
+    refresh,
+    loadContent,
+  } = useProjectSpecs(projectId)
   const [selected, setSelected] = useState<ProjectSpecSummary | null>(null)
+
+  // A run started by anyone in the room pauses this button for everyone, so two
+  // specs can never be generated from the same canvas at once.
+  const { isGenerating } = useAiStatusFeed()
+
+  // The document is stored before the run reports success, so a finished run is
+  // exactly when the list has something new to show.
+  const { isActive, error: runError, startRun } = useSpecRun({
+    projectId,
+    onFinished: refresh,
+  })
+
+  const isBusy = isActive || isGenerating
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 px-4 py-4">
       <Button
         type="button"
         variant="ghost"
+        onClick={() => void startRun()}
+        disabled={isBusy}
+        aria-busy={isActive}
         className="w-full shrink-0 bg-ai text-copy-primary hover:bg-ai/90"
       >
-        <Sparkles className="size-4" />
-        Generate Spec
+        {isActive ? (
+          <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+        ) : (
+          <Sparkles className="size-4" />
+        )}
+        {isActive
+          ? "Generating spec…"
+          : isGenerating
+            ? "Ghost AI is busy…"
+            : "Generate Spec"}
       </Button>
+
+      {runError && (
+        <div
+          role="alert"
+          className="flex items-start gap-2 rounded-xl border border-error/40 bg-error/10 px-3 py-2 text-xs text-error"
+        >
+          <AlertCircle className="mt-px size-3.5 shrink-0" aria-hidden="true" />
+          <span className="min-w-0 flex-1 break-words">{runError}</span>
+        </div>
+      )}
 
       {isLoading ? (
         <div
@@ -109,13 +151,13 @@ export function SpecsTab({ projectId }: { projectId: string }) {
           <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
           Loading specs…
         </div>
-      ) : error ? (
+      ) : listError ? (
         <div
           role="alert"
           className="flex items-start gap-2 rounded-xl border border-error/40 bg-error/10 px-3 py-2 text-xs text-error"
         >
           <AlertCircle className="mt-px size-3.5 shrink-0" aria-hidden="true" />
-          <span className="min-w-0 flex-1 break-words">{error}</span>
+          <span className="min-w-0 flex-1 break-words">{listError}</span>
         </div>
       ) : specs.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">

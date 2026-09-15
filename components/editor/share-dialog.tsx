@@ -79,6 +79,9 @@ function CollaboratorRow({
     <div className="flex items-center gap-3 rounded-xl bg-subtle px-3 py-2.5">
       {/* Avatar */}
       {collaborator.avatarUrl ? (
+        // Clerk-hosted avatars are already optimized at the CDN, so they stay a
+        // plain img; the fallback below covers anyone without a picture.
+        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={collaborator.avatarUrl}
           alt={collaborator.displayName}

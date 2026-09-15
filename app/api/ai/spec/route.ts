@@ -1,6 +1,8 @@
 import { auth } from "@clerk/nextjs/server";
 import { tasks } from "@trigger.dev/sdk";
 import { NextResponse } from "next/server";
+import { readChatHistory } from "@/lib/liveblocks-agent";
+import { readCanvasSnapshot } from "@/lib/liveblocks-flow";
 import { prisma } from "@/lib/prisma";
 import { checkProjectAccess, getClerkIdentity } from "@/lib/project-access";
 import { specGenerationRequestSchema } from "@/types/tasks";
@@ -11,8 +13,10 @@ export const dynamic = "force-dynamic";
 /* -------------------------------------------------------------------------- */
 /*  POST /api/ai/spec                                                         */
 /*                                                                            */
-/*  Starts a background spec generation run for the caller's own project and  */
-/*  records the run so the token route can verify ownership later.            */
+/*  Starts a background spec run for the caller's own project. The canvas and  */
+/*  the conversation are read from the room itself, so a spec always describes */
+/*  what the room actually holds; the run is recorded so the token route can   */
+/*  verify ownership later.                                                   */
 /* -------------------------------------------------------------------------- */
 
 export async function POST(request: Request) {
@@ -38,7 +42,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { roomId, nodes, edges, chatHistory } = parsed.data;
+  const { roomId } = parsed.data;
 
   // 3. Verify project access. The room id *is* the project id in this app, so
   // access is always resolved from the room — a client-supplied project id is
@@ -53,7 +57,35 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // 4. Trigger the spec task in the background
+  // 4. Read what the spec describes straight from the room. A spec summarizes
+  // the shared design, so neither half of the input comes from the client: the
+  // canvas is the collaborative document and the conversation is the room's
+  // chat feed.
+  const canvas = await readCanvasSnapshot(roomId);
+
+  const nodes = canvas.nodes.map((node) => ({
+    id: node.id,
+    label: node.label,
+    shape: node.shape,
+    color: node.color,
+  }));
+
+  if (nodes.length === 0) {
+    return NextResponse.json(
+      { error: "The canvas is empty — add components before generating a spec" },
+      { status: 400 },
+    );
+  }
+
+  const edges = canvas.edges.map((edge) => ({
+    source: edge.source,
+    target: edge.target,
+    label: edge.label,
+  }));
+
+  const chatHistory = await readChatHistory(roomId);
+
+  // 5. Trigger the spec task in the background
   const handle = await tasks.trigger<typeof generateSpecTask>("generate-spec", {
     projectId: project.id,
     roomId,
@@ -62,7 +94,7 @@ export async function POST(request: Request) {
     chatHistory,
   });
 
-  // 5. Track the run so the token route can verify ownership later
+  // 6. Track the run so the token route can verify ownership later
   await prisma.taskRun.create({
     data: {
       runId: handle.id,

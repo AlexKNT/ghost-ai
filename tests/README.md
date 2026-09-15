@@ -22,12 +22,12 @@ npm run test:watch  # watch mode
 | `spec-generation.test.ts`   | Spec prompt building, palette/edge resolution, Markdown normalization  |
 | `spec-list.test.ts`         | Spec list payload validation, API URLs, and date formatting             |
 | `spec-markdown.test.ts`     | Rendered spec Markdown: headings, GFM tables, code blocks, no DOM leaks |
-| `specs-tab.test.ts`         | Specs tab list, empty, loading, and error states (static markup)        |
+| `specs-tab.test.ts`         | Specs tab list/empty/loading/error states and the generate button        |
 | `spec-storage.test.ts`      | Spec blob path/filename rules and the Blob + Postgres save split       |
 | `starter-templates.test.ts` | Template snapshots satisfy the same schema as user-created content     |
 | `task-schemas.test.ts`      | Zod schemas for the status feed and structured model output            |
 | `ai-status.test.ts`         | Latest-message selection from the `ai-status-feed` payloads            |
-| `ai-chat.test.ts`           | Chat message validation and ordering for the `ai-chat` feed            |
+| `ai-chat.test.ts`           | Chat message validation, ordering, and the server-side reader           |
 | `project-access.test.ts`    | Ownership and collaborator access checks with Clerk/Prisma doubles     |
 | `liveblocks-color.test.ts`  | Deterministic collaborator colors                                     |
 

@@ -1,11 +1,23 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
+import { readChatHistory } from "@/lib/liveblocks-agent"
 import {
   AI_CHAT_FEED_ID,
   AI_STATUS_FEED_ID,
   aiChatMessageSchema,
   selectChatMessages,
 } from "@/types/tasks"
+
+/**
+ * Server-side chat reads (the spec payload) go through the Liveblocks node
+ * client, so that boundary is replaced here.
+ */
+const liveblocksMock = vi.hoisted(() => ({ getFeedMessages: vi.fn() }))
+
+vi.mock("@/lib/liveblocks", () => ({
+  getLiveblocks: () => liveblocksMock,
+  getUserColor: () => "#000000",
+}))
 
 /* -------------------------------------------------------------------------- */
 /*  Chat feed isolation                                                       */
@@ -146,5 +158,68 @@ describe("selectChatMessages", () => {
     }))
 
     expect(selectChatMessages(messages)).toHaveLength(3)
+  })
+})
+
+/* -------------------------------------------------------------------------- */
+/*  Server-side reads (spec payload)                                          */
+/* -------------------------------------------------------------------------- */
+
+describe("readChatHistory", () => {
+  it("returns the room's conversation, oldest first", async () => {
+    liveblocksMock.getFeedMessages.mockResolvedValue({
+      data: [
+        {
+          id: "m2",
+          createdAt: 2,
+          updatedAt: 2,
+          data: { sender: "Ghost AI", role: "assistant", content: "Done", timestamp: 20 },
+        },
+        {
+          id: "m1",
+          createdAt: 1,
+          updatedAt: 1,
+          data: { sender: "Ada", role: "user", content: "Add a queue", timestamp: 10 },
+        },
+      ],
+    })
+
+    const history = await readChatHistory("proj_1")
+
+    expect(liveblocksMock.getFeedMessages).toHaveBeenCalledWith({
+      roomId: "proj_1",
+      feedId: AI_CHAT_FEED_ID,
+    })
+    expect(history.map((message) => message.content)).toEqual([
+      "Add a queue",
+      "Done",
+    ])
+    expect(history[0]).toMatchObject({ sender: "Ada", role: "user" })
+  })
+
+  it("drops entries that do not match the chat contract", async () => {
+    liveblocksMock.getFeedMessages.mockResolvedValue({
+      data: [
+        { id: "bad", createdAt: 1, updatedAt: 1, data: { sender: "Ada" } },
+        {
+          id: "good",
+          createdAt: 2,
+          updatedAt: 2,
+          data: { sender: "Ada", role: "user", content: "Keep me", timestamp: 5 },
+        },
+      ],
+    })
+
+    const history = await readChatHistory("proj_1")
+
+    expect(history.map((message) => message.content)).toEqual(["Keep me"])
+  })
+
+  it("treats a missing or unreadable feed as an empty conversation", async () => {
+    liveblocksMock.getFeedMessages.mockResolvedValue({ data: [] })
+    await expect(readChatHistory("proj_1")).resolves.toEqual([])
+
+    liveblocksMock.getFeedMessages.mockRejectedValue(new Error("no feed"))
+    await expect(readChatHistory("proj_1")).resolves.toEqual([])
   })
 })

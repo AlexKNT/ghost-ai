@@ -368,10 +368,10 @@ const MAX_SPEC_HISTORY = 100
 const MAX_SPEC_TEXT_LENGTH = 200
 
 /**
- * A canvas node as sent with a spec request.
+ * A canvas node as it enters a spec payload.
  *
  * Only identity, label, shape and color mean anything in a written spec, so
- * geometry is optional: the spec task never reads positions and never writes
+ * geometry is not carried: the spec task never reads positions and never writes
  * back to the canvas.
  */
 export const specCanvasNodeSchema = z.object({
@@ -396,15 +396,12 @@ export type SpecCanvasEdge = z.infer<typeof specCanvasEdgeSchema>
 /**
  * Body accepted by `POST /api/ai/spec`.
  *
- * There is deliberately no project id: the room id *is* the project id in this
- * app, so access is resolved from `roomId` and a client can never point a run
- * at a project it does not own (unknown keys are stripped, never forwarded).
+ * Only the room: the canvas and the conversation are read from that room on the
+ * server, so a spec always describes what is actually on the canvas and a
+ * client can never choose what gets summarized.
  */
 export const specGenerationRequestSchema = z.object({
   roomId: z.string().min(1),
-  nodes: z.array(specCanvasNodeSchema).max(MAX_SPEC_NODES).default([]),
-  edges: z.array(specCanvasEdgeSchema).max(MAX_SPEC_EDGES).default([]),
-  chatHistory: z.array(aiChatMessageSchema).max(MAX_SPEC_HISTORY).default([]),
 })
 
 export type SpecGenerationRequest = z.infer<
@@ -412,12 +409,16 @@ export type SpecGenerationRequest = z.infer<
 >
 
 /**
- * Payload of the `generate-spec` task: the validated request plus the project
- * resolved from the room on the server, so the task trusts nothing from the
- * client except the content it was asked to describe.
+ * Payload of the `generate-spec` task: what the server read from the room, plus
+ * the project it resolved from that same room. The task trusts this because the
+ * request handler is the only producer.
  */
-export const specGenerationPayloadSchema = specGenerationRequestSchema.extend({
+export const specGenerationPayloadSchema = z.object({
   projectId: z.string().min(1),
+  roomId: z.string().min(1),
+  nodes: z.array(specCanvasNodeSchema).max(MAX_SPEC_NODES).default([]),
+  edges: z.array(specCanvasEdgeSchema).max(MAX_SPEC_EDGES).default([]),
+  chatHistory: z.array(aiChatMessageSchema).max(MAX_SPEC_HISTORY).default([]),
 })
 
 export type SpecGenerationPayload = z.infer<

@@ -53,6 +53,10 @@ function CollaboratorAvatar({
       title={name}
     >
       {src && !imgFailed ? (
+        // Clerk already serves avatars from its own image CDN, and this slot is
+        // 28px, so routing them through the Next image optimizer would only add
+        // a proxy hop. The initials fallback below covers load failures.
+        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={src}
           alt={name}

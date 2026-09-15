@@ -1,9 +1,12 @@
 import { getLiveblocks } from "@/lib/liveblocks"
 import {
   AI_ASSISTANT_NAME,
+  AI_CHAT_FEED_ID,
   AI_STATUS_FEED_ID,
   aiStatusMessageSchema,
+  selectChatMessages,
   type AiStatusMessage,
+  type ChatMessage,
 } from "@/types/tasks"
 
 /* -------------------------------------------------------------------------- */
@@ -111,5 +114,36 @@ async function ensureStatusFeed(roomId: string): Promise<void> {
     await liveblocks.createFeed({ roomId, feedId: AI_STATUS_FEED_ID })
   } catch {
     // Already created, possibly by a concurrent run. Nothing to do.
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Chat feed                                                                 */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Reads the room's shared conversation, validated and oldest first.
+ *
+ * Server-side specs need the conversation that produced the design, and the
+ * room already holds it, so it is read here rather than accepted from a client.
+ * Every entry is validated by `selectChatMessages`, which drops anything that
+ * does not match the chat contract.
+ *
+ * A room without a chat feed simply has no conversation yet, so both a missing
+ * feed and a read failure return an empty history instead of failing the
+ * caller.
+ */
+export async function readChatHistory(roomId: string): Promise<ChatMessage[]> {
+  const liveblocks = getLiveblocks()
+
+  try {
+    const { data } = await liveblocks.getFeedMessages({
+      roomId,
+      feedId: AI_CHAT_FEED_ID,
+    })
+
+    return selectChatMessages(data ?? [])
+  } catch {
+    return []
   }
 }
