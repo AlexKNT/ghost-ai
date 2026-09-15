@@ -20,6 +20,9 @@ npm run test:watch  # watch mode
 | `design-plan.test.ts`       | AI design plan normalization (the validation gate before any mutation) |
 | `design-run.test.ts`        | Terminal run detection and the outcome copy published to the room      |
 | `spec-generation.test.ts`   | Spec prompt building, palette/edge resolution, Markdown normalization  |
+| `spec-list.test.ts`         | Spec list payload validation, API URLs, and date formatting             |
+| `spec-markdown.test.ts`     | Rendered spec Markdown: headings, GFM tables, code blocks, no DOM leaks |
+| `specs-tab.test.ts`         | Specs tab list, empty, loading, and error states (static markup)        |
 | `spec-storage.test.ts`      | Spec blob path/filename rules and the Blob + Postgres save split       |
 | `starter-templates.test.ts` | Template snapshots satisfy the same schema as user-created content     |
 | `task-schemas.test.ts`      | Zod schemas for the status feed and structured model output            |

@@ -11,11 +11,8 @@ import { useSelf } from "@liveblocks/react"
 import {
   AlertCircle,
   Bot,
-  Download,
-  FileText,
   Loader2,
   Send,
-  Sparkles,
   X,
 } from "lucide-react"
 
@@ -23,6 +20,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { SpecsTab } from "@/components/editor/specs-tab"
 import { useAiChatFeed } from "@/hooks/useAiChatFeed"
 import { useAiStatusFeed } from "@/hooks/useAiStatusFeed"
 import { useDesignRun } from "@/hooks/useDesignRun"
@@ -73,13 +71,6 @@ const STATUS_LABELS: Record<DesignRunStatus, string> = {
 
 /** Shown while the run has started but has not reported anything yet. */
 const STARTING_STATUS_LABEL = "Submitting your request…"
-
-const DEMO_SPEC = {
-  title: "System Architecture Spec",
-  filename: "system-architecture.md",
-  snippet:
-    "Overview of services, data flow, storage, and deployment topology generated from the current canvas.",
-} as const
 
 // Active/inactive accent treatment shared by both tab triggers.
 const TAB_TRIGGER_CLASS =
@@ -376,60 +367,6 @@ function AiArchitectTab({ projectId }: { projectId: string }) {
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Specs                                                                     */
-/* -------------------------------------------------------------------------- */
-
-function SpecsTab() {
-  return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-4">
-      <Button
-        type="button"
-        variant="ghost"
-        className="w-full bg-ai text-copy-primary hover:bg-ai/90"
-      >
-        <Sparkles className="size-4" />
-        Generate Spec
-      </Button>
-
-      {/* Demo spec card */}
-      <div className="rounded-2xl border border-surface-border bg-elevated p-4">
-        <div className="flex items-start gap-3">
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-ai/15 text-ai-text">
-            <FileText className="size-4" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <h3 className="truncate text-sm font-medium text-copy-primary">
-              {DEMO_SPEC.title}
-            </h3>
-            <p className="mt-1 text-xs text-copy-muted">
-              {DEMO_SPEC.snippet}
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-3 flex items-center justify-between gap-2 border-t border-surface-border pt-3">
-          <span className="truncate font-mono text-[11px] text-copy-faint">
-            {DEMO_SPEC.filename}
-          </span>
-          <button
-            type="button"
-            disabled
-            aria-label="Download spec"
-            className={cn(
-              "inline-flex shrink-0 items-center gap-1.5 rounded-xl px-2 py-1 text-xs transition-colors",
-              "text-copy-faint disabled:cursor-not-allowed disabled:opacity-60",
-            )}
-          >
-            <Download className="size-3.5" />
-            Download
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-/* -------------------------------------------------------------------------- */
 /*  Sidebar                                                                   */
 /* -------------------------------------------------------------------------- */
 
@@ -502,7 +439,7 @@ export function AISidebar({ isOpen, onClose, projectId }: AISidebarProps) {
         </TabsContent>
 
         <TabsContent value="specs" className="flex min-h-0 flex-1 flex-col">
-          <SpecsTab />
+          <SpecsTab projectId={projectId} />
         </TabsContent>
       </Tabs>
     </aside>
