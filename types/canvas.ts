@@ -43,6 +43,26 @@ export function getNodeColor(name: string | undefined): NodeColor {
   return NODE_COLORS.find((color) => color.name === name) ?? DEFAULT_NODE_COLOR
 }
 
+/**
+ * Resolve a stored node color to its semantic palette name.
+ *
+ * Node colors are persisted as the palette's fill value, but a template or an
+ * API payload may already carry the palette name, so both forms resolve here.
+ * Anything unrecognized falls back to the default palette name — the same
+ * pre-model normalization the design agent needs before it describes a canvas.
+ */
+export function getNodeColorName(value: string | undefined): NodeColorName {
+  if (!value) return DEFAULT_NODE_COLOR.name
+
+  const normalized = value.trim().toLowerCase()
+  const match = NODE_COLORS.find(
+    (color) =>
+      color.name === normalized || color.fill.toLowerCase() === normalized,
+  )
+
+  return match?.name ?? DEFAULT_NODE_COLOR.name
+}
+
 /* -------------------------------------------------------------------------- */
 /*  Node Shapes                                                               */
 /* -------------------------------------------------------------------------- */

@@ -16,7 +16,8 @@ import {
 export interface UseDesignRunOptions {
   /**
    * Project the prompt belongs to. The project id doubles as the Liveblocks
-   * room id, and the API needs both, so a single value is enough here.
+   * room id, and the API resolves access from the room, so a single value is
+   * enough here.
    */
   projectId: string
   /** Called exactly once per run, with its terminal outcome. */
@@ -58,7 +59,8 @@ const LOST_CONNECTION_MESSAGE =
 
 /**
  * Starts the run and returns its id. The prompt itself is already part of the
- * room's shared chat — the API only needs the text and the room it belongs to.
+ * room's shared chat — the API only needs the text and the room it belongs to,
+ * because the room id is what access is resolved from.
  */
 async function requestDesignRun(
   prompt: string,
@@ -67,7 +69,6 @@ async function requestDesignRun(
   const data = await postJson<{ runId?: unknown }>(DESIGN_ENDPOINT, {
     prompt,
     roomId: projectId,
-    projectId,
   })
 
   if (typeof data.runId !== "string" || data.runId.length === 0) {

@@ -1,12 +1,14 @@
 import { auth } from "@clerk/nextjs/server";
-import { auth as triggerAuth } from "@trigger.dev/sdk";
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { issueRunTokenForOwner } from "@/lib/run-token";
 
 export const dynamic = "force-dynamic";
 
 /* -------------------------------------------------------------------------- */
 /*  POST /api/ai/design/token                                                 */
+/*                                                                            */
+/*  Exchanges a design run id for a token that can read that one run, so the  */
+/*  browser can follow the generation through `useRealtimeRun`.               */
 /* -------------------------------------------------------------------------- */
 
 interface TokenRequestBody {
@@ -33,20 +35,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "runId is required" }, { status: 400 });
   }
 
-  // 3. Verify ownership using the TaskRun record
-  const taskRun = await prisma.taskRun.findUnique({ where: { runId } });
-  if (!taskRun || taskRun.userId !== userId) {
+  // 3. Issue a public token scoped to this run, for its owner only
+  const token = await issueRunTokenForOwner(userId, runId);
+  if (!token) {
     return NextResponse.json({ error: "Run not found" }, { status: 404 });
   }
-
-  // 4. Issue a public token scoped to this specific run
-  const token = await triggerAuth.createPublicToken({
-    scopes: {
-      read: {
-        runs: [runId],
-      },
-    },
-  });
 
   return NextResponse.json({ token });
 }

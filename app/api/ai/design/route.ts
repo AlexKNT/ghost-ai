@@ -14,7 +14,6 @@ export const dynamic = "force-dynamic";
 interface DesignRequestBody {
   prompt?: string;
   roomId?: string;
-  projectId?: string;
 }
 
 export async function POST(request: Request) {
@@ -34,23 +33,24 @@ export async function POST(request: Request) {
 
   const prompt = body.prompt?.trim();
   const roomId = body.roomId?.trim();
-  const projectId = body.projectId?.trim();
 
-  if (!prompt || !roomId || !projectId) {
+  if (!prompt || !roomId) {
     return NextResponse.json(
-      { error: "prompt, roomId, and projectId are required" },
+      { error: "prompt and roomId are required" },
       { status: 400 },
     );
   }
 
-  // 3. Verify project access
+  // 3. Verify project access. The room id *is* the project id in this app, so
+  // access is always resolved from the room — a client-supplied project id is
+  // never read, let alone trusted.
   const identity = await getClerkIdentity();
   if (!identity) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { allowed } = await checkProjectAccess(projectId, identity);
-  if (!allowed) {
+  const { allowed, project } = await checkProjectAccess(roomId, identity);
+  if (!allowed || !project) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -64,7 +64,7 @@ export async function POST(request: Request) {
   await prisma.taskRun.create({
     data: {
       runId: handle.id,
-      projectId,
+      projectId: project.id,
       userId: identity.userId,
     },
   });

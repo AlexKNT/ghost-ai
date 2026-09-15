@@ -8,6 +8,7 @@ import {
   NODE_SHAPE_TYPES,
   SHAPE_DRAG_DATA_FORMAT,
   getNodeColor,
+  getNodeColorName,
   getNodeShape,
   type NodeShape,
 } from "@/types/canvas"
@@ -47,6 +48,21 @@ describe("node color palette", () => {
     expect(DEFAULT_NODE_COLOR).toBe(NODE_COLORS[0])
     expect(getNodeColor("chartreuse")).toBe(DEFAULT_NODE_COLOR)
     expect(getNodeColor(undefined)).toBe(DEFAULT_NODE_COLOR)
+  })
+
+  it("resolves a stored fill or a palette name to the palette name", () => {
+    for (const color of NODE_COLORS) {
+      expect(getNodeColorName(color.fill)).toBe(color.name)
+      expect(getNodeColorName(color.name)).toBe(color.name)
+    }
+  })
+
+  it("normalizes case and whitespace, and defaults the rest", () => {
+    expect(getNodeColorName("  #10233D ")).toBe("blue")
+    expect(getNodeColorName("PURPLE")).toBe("purple")
+    expect(getNodeColorName("#123456")).toBe(DEFAULT_NODE_COLOR.name)
+    expect(getNodeColorName(undefined)).toBe(DEFAULT_NODE_COLOR.name)
+    expect(getNodeColorName("")).toBe(DEFAULT_NODE_COLOR.name)
   })
 })
 

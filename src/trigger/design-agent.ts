@@ -10,12 +10,12 @@ import {
 } from "@/lib/design-plan"
 import {
   clearAgentPresence,
-  publishAiStatus,
   setAgentPresence,
   type AgentPresence,
 } from "@/lib/liveblocks-agent"
 import { applyCanvasChanges, readCanvasSnapshot } from "@/lib/liveblocks-flow"
-import { designPlanSchema, type DesignRunStatus } from "@/types/tasks"
+import { reportAiStatus, toErrorMessage } from "@/src/trigger/ai-status"
+import { designPlanSchema } from "@/types/tasks"
 
 /* -------------------------------------------------------------------------- */
 /*  Design agent task                                                         */
@@ -41,7 +41,7 @@ export const designAgentTask = task({
 
     logger.log("Design agent started", { runId, roomId, prompt })
 
-    await reportStatus(roomId, runId, "Reading the current canvas…", "thinking")
+    await reportAiStatus(roomId, runId, "Reading the current canvas…", "thinking")
     await reportPresence(roomId, { cursor: null, thinking: true })
 
     try {
@@ -68,7 +68,7 @@ export const designAgentTask = task({
 
       if (plan.isEmpty) {
         const message = plan.summary || "No canvas changes were needed."
-        await reportStatus(roomId, runId, message, "complete")
+        await reportAiStatus(roomId, runId, message, "complete")
         metadata.set("status", "complete")
 
         logger.log("Design agent finished without changes", { runId })
@@ -76,14 +76,14 @@ export const designAgentTask = task({
       }
 
       // 4. Publish progress and move the AI cursor to where it will work.
-      await reportStatus(roomId, runId, describeChanges(plan), "applying")
+      await reportAiStatus(roomId, runId, describeChanges(plan), "applying")
       await reportPresence(roomId, { cursor: plan.focus, thinking: true })
 
       // 5. Write the change set into the shared room in a single mutation.
       const applied = await applyCanvasChanges(roomId, plan.changes)
 
       const summary = plan.summary || "Design applied to the canvas"
-      await reportStatus(
+      await reportAiStatus(
         roomId,
         runId,
         `${summary} (${describeChanges(plan)})`,
@@ -95,11 +95,11 @@ export const designAgentTask = task({
 
       return { ok: true, runId, summary, counts: plan.counts, applied }
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
+      const message = toErrorMessage(error)
 
       logger.error("Design agent failed", { runId, error: message })
       metadata.set("status", "error")
-      await reportStatus(
+      await reportAiStatus(
         roomId,
         runId,
         `Design generation failed: ${message}`,
@@ -133,22 +133,9 @@ function getModel() {
 /* -------------------------------------------------------------------------- */
 
 /**
- * Status and presence are informational. A failure to report must never take
- * down the generation itself, so both are logged and swallowed.
+ * Presence is informational, exactly like the status feed. A failure to report
+ * must never take down the generation itself, so it is logged and swallowed.
  */
-async function reportStatus(
-  roomId: string,
-  runId: string,
-  text: string,
-  status: DesignRunStatus,
-): Promise<void> {
-  try {
-    await publishAiStatus(roomId, { text, status, runId, updatedAt: Date.now() })
-  } catch (error) {
-    logger.warn("Failed to publish AI status", { error: toMessage(error) })
-  }
-}
-
 async function reportPresence(
   roomId: string,
   presence: AgentPresence,
@@ -156,7 +143,7 @@ async function reportPresence(
   try {
     await setAgentPresence(roomId, presence)
   } catch (error) {
-    logger.warn("Failed to update AI presence", { error: toMessage(error) })
+    logger.warn("Failed to update AI presence", { error: toErrorMessage(error) })
   }
 }
 
@@ -164,7 +151,7 @@ async function clearPresenceQuietly(roomId: string): Promise<void> {
   try {
     await clearAgentPresence(roomId)
   } catch (error) {
-    logger.warn("Failed to clear AI presence", { error: toMessage(error) })
+    logger.warn("Failed to clear AI presence", { error: toErrorMessage(error) })
   }
 }
 
@@ -186,8 +173,4 @@ function describeChanges(plan: NormalizedDesignPlan): string {
 
 function plural(count: number, noun: string): string {
   return `${count} ${noun}${count === 1 ? "" : "s"}`
-}
-
-function toMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error)
 }

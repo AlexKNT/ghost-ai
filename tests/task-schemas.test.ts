@@ -7,6 +7,8 @@ import {
   aiStatusMessageSchema,
   designPlanSchema,
   designRunStatusSchema,
+  specGenerationPayloadSchema,
+  specGenerationRequestSchema,
 } from "@/types/tasks"
 
 /* -------------------------------------------------------------------------- */
@@ -131,5 +133,114 @@ describe("designPlanSchema", () => {
 
   it("requires a summary", () => {
     expect(designPlanSchema.safeParse({ nodes: [] }).success).toBe(false)
+  })
+})
+
+/* -------------------------------------------------------------------------- */
+/*  Spec generation                                                           */
+/* -------------------------------------------------------------------------- */
+
+describe("specGenerationRequestSchema", () => {
+  it("requires a room and defaults the canvas inputs to empty arrays", () => {
+    const parsed = specGenerationRequestSchema.parse({ roomId: "proj_1" })
+
+    expect(parsed).toEqual({
+      roomId: "proj_1",
+      nodes: [],
+      edges: [],
+      chatHistory: [],
+    })
+    expect(specGenerationRequestSchema.safeParse({}).success).toBe(false)
+    expect(
+      specGenerationRequestSchema.safeParse({ roomId: "" }).success,
+    ).toBe(false)
+  })
+
+  it("drops a client-supplied project id instead of forwarding it", () => {
+    const parsed = specGenerationRequestSchema.parse({
+      roomId: "proj_1",
+      projectId: "someone-elses-project",
+    })
+
+    expect(parsed).not.toHaveProperty("projectId")
+  })
+
+  it("accepts a canvas plus its conversation", () => {
+    const request = {
+      roomId: "proj_1",
+      nodes: [
+        { id: "n1", label: "API Gateway", shape: "diamond", color: "purple" },
+        { id: "n2", label: "Orders DB", shape: "cylinder" },
+      ],
+      edges: [{ source: "n1", target: "n2", label: "routes" }],
+      chatHistory: [
+        {
+          sender: "Ada",
+          role: "user",
+          content: "Design a payments system",
+          timestamp: 1_760_000_000_000,
+        },
+      ],
+    }
+
+    const parsed = specGenerationRequestSchema.parse(request)
+
+    expect(parsed.nodes).toEqual(request.nodes)
+    expect(parsed.edges).toEqual(request.edges)
+    expect(parsed.chatHistory).toEqual(request.chatHistory)
+  })
+
+  it("rejects shapes outside the canvas vocabulary and broken edges", () => {
+    const base = { roomId: "proj_1" }
+
+    expect(
+      specGenerationRequestSchema.safeParse({
+        ...base,
+        nodes: [{ id: "n1", label: "A", shape: "triangle" }],
+      }).success,
+    ).toBe(false)
+
+    expect(
+      specGenerationRequestSchema.safeParse({
+        ...base,
+        edges: [{ source: "n1" }],
+      }).success,
+    ).toBe(false)
+  })
+
+  it("holds chat messages to the shared chat contract", () => {
+    expect(
+      specGenerationRequestSchema.safeParse({
+        roomId: "proj_1",
+        chatHistory: [
+          { sender: "Ada", role: "user", content: "", timestamp: 0 },
+        ],
+      }).success,
+    ).toBe(false)
+
+    expect(
+      specGenerationRequestSchema.safeParse({
+        roomId: "proj_1",
+        chatHistory: [
+          { sender: "Ada", role: "system", content: "hi", timestamp: 0 },
+        ],
+      }).success,
+    ).toBe(false)
+  })
+})
+
+describe("specGenerationPayloadSchema", () => {
+  it("requires the project resolved on the server", () => {
+    expect(
+      specGenerationPayloadSchema.safeParse({ roomId: "proj_1" }).success,
+    ).toBe(false)
+
+    const parsed = specGenerationPayloadSchema.parse({
+      roomId: "proj_1",
+      projectId: "proj_1",
+    })
+
+    expect(parsed.projectId).toBe("proj_1")
+    expect(parsed.nodes).toEqual([])
   })
 })

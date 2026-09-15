@@ -1,6 +1,7 @@
 import {
   NODE_COLORS,
   getNodeColor,
+  getNodeColorName,
   getNodeShape,
   type CanvasSnapshot,
 } from "@/types/canvas"
@@ -100,7 +101,7 @@ export function buildDesignAgentPrompt({
         id: node.id,
         label: node.label,
         shape: node.shape,
-        color: colorNameFor(node.color),
+        color: getNodeColorName(node.color),
         x: node.x,
         y: node.y,
         width: node.width,
@@ -330,11 +331,4 @@ function resolveEndpoint(
   if (!ref) return null
   if (existingNodeIds.has(ref)) return ref
   return keyToId.get(ref.toLowerCase()) ?? null
-}
-
-function colorNameFor(fill: string): string {
-  const match = NODE_COLORS.find(
-    (color) => color.fill.toLowerCase() === fill.toLowerCase(),
-  )
-  return match?.name ?? "neutral"
 }

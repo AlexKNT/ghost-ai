@@ -356,3 +356,70 @@ export const designPlanSchema = z.object({
 })
 
 export type DesignPlan = z.infer<typeof designPlanSchema>
+
+/* -------------------------------------------------------------------------- */
+/*  Spec generation                                                           */
+/* -------------------------------------------------------------------------- */
+
+/** Upper bounds so a spec request can never carry an unbounded payload. */
+const MAX_SPEC_NODES = 200
+const MAX_SPEC_EDGES = 400
+const MAX_SPEC_HISTORY = 100
+const MAX_SPEC_TEXT_LENGTH = 200
+
+/**
+ * A canvas node as sent with a spec request.
+ *
+ * Only identity, label, shape and color mean anything in a written spec, so
+ * geometry is optional: the spec task never reads positions and never writes
+ * back to the canvas.
+ */
+export const specCanvasNodeSchema = z.object({
+  id: z.string().min(1).max(MAX_SPEC_TEXT_LENGTH),
+  label: z.string().max(MAX_SPEC_TEXT_LENGTH).optional(),
+  shape: z.enum(NODE_SHAPE_TYPES).optional(),
+  /** Palette name or the stored fill value — both resolve to a palette name. */
+  color: z.string().max(64).optional(),
+})
+
+export type SpecCanvasNode = z.infer<typeof specCanvasNodeSchema>
+
+/** A directed dependency between two nodes, referenced by node id. */
+export const specCanvasEdgeSchema = z.object({
+  source: z.string().min(1).max(MAX_SPEC_TEXT_LENGTH),
+  target: z.string().min(1).max(MAX_SPEC_TEXT_LENGTH),
+  label: z.string().max(MAX_SPEC_TEXT_LENGTH).optional(),
+})
+
+export type SpecCanvasEdge = z.infer<typeof specCanvasEdgeSchema>
+
+/**
+ * Body accepted by `POST /api/ai/spec`.
+ *
+ * There is deliberately no project id: the room id *is* the project id in this
+ * app, so access is resolved from `roomId` and a client can never point a run
+ * at a project it does not own (unknown keys are stripped, never forwarded).
+ */
+export const specGenerationRequestSchema = z.object({
+  roomId: z.string().min(1),
+  nodes: z.array(specCanvasNodeSchema).max(MAX_SPEC_NODES).default([]),
+  edges: z.array(specCanvasEdgeSchema).max(MAX_SPEC_EDGES).default([]),
+  chatHistory: z.array(aiChatMessageSchema).max(MAX_SPEC_HISTORY).default([]),
+})
+
+export type SpecGenerationRequest = z.infer<
+  typeof specGenerationRequestSchema
+>
+
+/**
+ * Payload of the `generate-spec` task: the validated request plus the project
+ * resolved from the room on the server, so the task trusts nothing from the
+ * client except the content it was asked to describe.
+ */
+export const specGenerationPayloadSchema = specGenerationRequestSchema.extend({
+  projectId: z.string().min(1),
+})
+
+export type SpecGenerationPayload = z.infer<
+  typeof specGenerationPayloadSchema
+>
