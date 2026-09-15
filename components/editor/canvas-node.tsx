@@ -12,8 +12,6 @@ import { NodeColorToolbar } from "@/components/editor/node-color-toolbar"
 /* -------------------------------------------------------------------------- */
 
 function RectangleShape({
-  width,
-  height,
   color,
   selected,
 }: {
@@ -34,8 +32,6 @@ function RectangleShape({
 }
 
 function PillShape({
-  width,
-  height,
   color,
   selected,
 }: {
@@ -125,8 +121,6 @@ function HexagonShape({
   color: string
   selected: boolean
 }) {
-  const hw = width / 2
-  const hh = height / 2
   const qx = width * 0.2
   const qy = height * 0.2
   const points = [
@@ -273,16 +267,11 @@ function CanvasNodeComponent({ id, data, selected }: NodeProps) {
 
   /* ---- inline label editing ---------------------------------------------- */
 
+  // `editValue` is only read while editing and is seeded from `label` by
+  // `startEditing`, so it needs no effect to stay in sync with external edits.
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState(label)
   const inputRef = useRef<HTMLTextAreaElement>(null)
-
-  // Sync edit value when label changes externally
-  useEffect(() => {
-    if (!isEditing) {
-      setEditValue(label)
-    }
-  }, [label, isEditing])
 
   // Auto-focus and select-all when entering edit mode
   useEffect(() => {

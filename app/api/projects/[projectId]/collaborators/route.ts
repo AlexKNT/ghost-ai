@@ -53,7 +53,7 @@ export async function GET(
 
   // Enrich with Clerk user data
   const emails = collaborators.map((c) => c.email)
-  let clerkUsers: Map<string, { firstName: string | null; lastName: string | null; imageUrl: string }> = new Map()
+  const clerkUsers: Map<string, { firstName: string | null; lastName: string | null; imageUrl: string }> = new Map()
 
   if (emails.length > 0) {
     try {

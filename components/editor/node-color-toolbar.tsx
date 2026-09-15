@@ -20,7 +20,6 @@ interface NodeColorToolbarProps {
 /* -------------------------------------------------------------------------- */
 
 function NodeColorToolbarComponent({
-  nodeId,
   currentColor,
   onColorChange,
 }: NodeColorToolbarProps) {

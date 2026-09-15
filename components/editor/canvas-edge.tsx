@@ -67,16 +67,11 @@ function CanvasEdgeComponent({
 
   /* ---- inline label editing ---------------------------------------------- */
 
+  // `editValue` is only read while editing and is seeded from `label` by
+  // `startEditing`, so it needs no effect to stay in sync with external edits.
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState(label)
   const inputRef = useRef<HTMLInputElement>(null)
-
-  // Sync edit value when label changes externally
-  useEffect(() => {
-    if (!isEditing) {
-      setEditValue(label)
-    }
-  }, [label, isEditing])
 
   // Auto-focus when entering edit mode
   useEffect(() => {

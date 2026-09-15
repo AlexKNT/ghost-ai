@@ -148,7 +148,6 @@ function DiagramPreview({ template }: DiagramPreviewProps) {
           break
         }
         case "hexagon": {
-          const hw = nw / 2
           const qx = nw * 0.2
           const qy = nh * 0.2
           ctx.beginPath()

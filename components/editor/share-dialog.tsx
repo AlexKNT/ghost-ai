@@ -154,14 +154,19 @@ export function ShareDialog({
   }, [projectId])
 
   useEffect(() => {
-    if (open) {
-      fetchCollaborators()
+    if (!open) return
+
+    // Reset the form, load the collaborator list, and focus the input after the
+    // dialog mounts. Deferred to a timer callback so the effect body itself
+    // never calls setState synchronously (react-hooks/set-state-in-effect).
+    const id = setTimeout(() => {
       setEmail("")
       setError(null)
-      // Focus the input after dialog mounts
-      const id = setTimeout(() => inputRef.current?.focus(), 100)
-      return () => clearTimeout(id)
-    }
+      void fetchCollaborators()
+      inputRef.current?.focus()
+    }, 100)
+
+    return () => clearTimeout(id)
   }, [open, fetchCollaborators])
 
   /* Cleanup copy timeout */
