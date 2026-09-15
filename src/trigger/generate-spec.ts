@@ -7,6 +7,7 @@ import {
   buildSpecGenerationPrompt,
   normalizeSpecMarkdown,
 } from "@/lib/spec-generation"
+import { saveProjectSpec, type StoredSpec } from "@/lib/spec-storage"
 import { reportAiStatus, toErrorMessage } from "@/src/trigger/ai-status"
 import { specGenerationPayloadSchema } from "@/types/tasks"
 
@@ -14,9 +15,9 @@ import { specGenerationPayloadSchema } from "@/types/tasks"
 /*  Spec generation task                                                      */
 /*                                                                            */
 /*  Turns the collaborative canvas and the room conversation into a Markdown  */
-/*  technical specification. Unlike the design agent, this task writes        */
-/*  nothing back to the room: it reads the validated payload, asks Gemini     */
-/*  for prose, and returns the document as its output.                        */
+/*  technical specification, then stores it: content in Vercel Blob and       */
+/*  metadata in Postgres. Unlike the design agent, nothing it writes lands    */
+/*  on the canvas.                                                            */
 /* -------------------------------------------------------------------------- */
 
 const MODEL_ID = "gemini-2.5-flash"
@@ -60,15 +61,39 @@ export const generateSpecTask = schemaTask({
         throw new Error("The model returned an empty specification")
       }
 
+      await reportAiStatus(roomId, runId, "Saving the specification…", "applying")
+
+      // The document only counts as generated once it can be downloaded again,
+      // so a storage failure fails the run instead of reporting a false success.
+      let stored: StoredSpec
+      try {
+        stored = await saveProjectSpec({ projectId, content: spec })
+      } catch (error) {
+        throw new Error(
+          `The specification could not be saved: ${toErrorMessage(error)}`,
+        )
+      }
+
       const summary = `Specification drafted (${spec.length.toLocaleString("en-US")} characters)`
 
       metadata.set("status", "complete")
       metadata.set("message", summary)
+      metadata.set("specId", stored.id)
       await reportAiStatus(roomId, runId, `${summary}.`, "complete")
 
-      logger.log("Spec generation finished", { runId, characters: spec.length })
+      logger.log("Spec generation finished", {
+        runId,
+        specId: stored.id,
+        characters: spec.length,
+      })
 
-      return { ok: true, runId, spec, characters: spec.length }
+      return {
+        ok: true,
+        runId,
+        specId: stored.id,
+        spec,
+        characters: spec.length,
+      }
     } catch (error) {
       const message = toErrorMessage(error)
 

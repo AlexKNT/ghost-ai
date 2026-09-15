@@ -1,4 +1,5 @@
 import { defineConfig } from "@trigger.dev/sdk";
+import { prismaExtension } from "@trigger.dev/build/extensions/prisma";
 
 export default defineConfig({
   project: "proj_vaacgyqvxlmyawmsdxmk",
@@ -19,4 +20,14 @@ export default defineConfig({
     },
   },
   dirs: ["./src/trigger"],
+  build: {
+    extensions: [
+      // Prisma 7 with the `prisma-client` provider and a driver adapter emits a
+      // TypeScript-only client. Modern mode marks `@prisma/client` external so
+      // the task bundle carries the generated client but not Prisma's runtime,
+      // which is resolved from the installed dependencies at run time. The
+      // client still has to be generated before deploying (`npx prisma generate`).
+      prismaExtension({ mode: "modern" }),
+    ],
+  },
 });

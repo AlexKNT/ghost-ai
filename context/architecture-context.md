@@ -59,7 +59,7 @@
 
 - Input: the current canvas graph and the room's conversation, validated at the API boundary and carried with the run payload.
 - Execution: durable background task via Trigger.dev (`generate-spec`), using the same Gemini model as the design agent. It writes nothing back to the room and reports progress through the room's `ai-status-feed`, so collaborators see spec generation the same way they see a design run.
-- Output: a Markdown technical spec returned as the run's task output, ready to be persisted as an artifact.
+- Output: a Markdown technical spec. Before the run reports success the document is uploaded to Vercel Blob at `specs/{projectId}/{specId}.md` and recorded as a `ProjectSpec` row holding that reference; the run also returns the Markdown and the record id. The blob URL is never handed to the client — owners and collaborators download the file through the authenticated route.
 - Access: the project is resolved from the room id on the server. A client-supplied project id is never read.
 
 ## Invariants

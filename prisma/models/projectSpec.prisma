@@ -1,0 +1,11 @@
+model ProjectSpec {
+  id        String   @id @default(cuid())
+  projectId String
+  /// Vercel Blob URL of the generated Markdown. Content never lives in the DB.
+  filePath  String
+  createdAt DateTime @default(now())
+
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, createdAt])
+}
