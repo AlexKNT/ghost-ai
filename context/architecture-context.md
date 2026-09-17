@@ -15,11 +15,10 @@
 ## System Boundaries
 
 - `app/api` — Authenticated request handlers: input validation, ownership checks, task triggering, and persistence.
-- `trigger` — Long-running background jobs: AI design generation and spec generation.
+- `src/trigger` — Long-running background jobs: AI design generation and spec generation.
 - `lib` — Shared infrastructure: Prisma client, access control helpers, and utilities.
 - `components` — UI composition: canvas surfaces, sidebars, dialogs, and interactive elements.
-- `prisma` — Database schema and generated client output.
-- `data` — Legacy local directory. Not used for new artifacts.
+- `prisma` — Database schema and migrations, split one file per model. The generated client is output to `app/generated/prisma`.
 
 ## Storage Model
 

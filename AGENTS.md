@@ -1,3 +1,49 @@
+# Ghost AI
+
+Real time collaborative system design workspace. A user describes a system in plain English, an AI agent maps it onto a shared canvas, collaborators refine it, and the graph becomes a Markdown specification.
+
+## Stack
+
+- **Language / Runtime**: TypeScript (strict), Node 20
+- **Framework**: Next.js 16 App Router, React 19
+- **Key dependencies**: Clerk for auth, Liveblocks and React Flow for the canvas, Prisma 7 over Postgres, Trigger.dev for durable AI runs, Vercel Blob for artifacts, AI SDK v7 with Gemini
+- **Package manager**: npm
+- Source of truth for this stack: `context/architecture-context.md`
+
+## Build approach
+
+<TBD, set by /scope>
+
+## Commands
+
+```bash
+npm run dev           # dev server
+npm run build         # production build
+npm run lint          # eslint, expected to stay clean
+npm test              # vitest, one shot
+npm run trigger:dev   # local Trigger.dev worker
+```
+
+## Specs
+
+Feature specs live in `context/feature-specs/NN-title.md`. `context/progress-tracker.md` holds the current state.
+
+## Rules
+
+- Read the `context/` files listed under Application Building Context below before implementing anything.
+- Access is resolved from the room. `roomId` is the project id, and a client supplied `projectId` is never trusted.
+- Project metadata lives in Postgres through Prisma (one model file per model under `prisma/models/`, client generated into `app/generated/prisma`). Generated artifacts (canvas snapshots, specs) live in Vercel Blob, with only the URL stored in the database.
+- Handlers stay thin: validate, check access, trigger a task. Durable AI work runs in `src/trigger/`.
+- Source style: no semicolons in `src/`, `lib/`, `types/`, `hooks/`, and `tests/`. Semicolons in `app/api/`.
+- Style UI with the tokens in `app/globals.css` through their Tailwind names. No raw palette classes and no hex values.
+
+## Context files
+
+- [app/api/AGENTS.md](app/api/AGENTS.md): route handler conventions and the AI run endpoints
+- [src/trigger/AGENTS.md](src/trigger/AGENTS.md): durable Trigger.dev tasks
+- [lib/AGENTS.md](lib/AGENTS.md): shared server modules, Liveblocks and Prisma access, run tokens
+- [components/editor/AGENTS.md](components/editor/AGENTS.md): the collaborative canvas and editor UI
+
 <!-- BEGIN:nextjs-agent-rules -->
 # This is NOT the Next.js you know
 

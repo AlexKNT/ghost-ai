@@ -1,5 +1,9 @@
 # Memory — Workspace Implementation (Liveblocks Canvas Foundation)
 
+> **Stale.** This is a session log from 2026-07-25 and it no longer describes
+> current state. Liveblocks collaboration is wired and the canvas route works.
+> Treat the `context/` files as the source of truth.
+
 Last updated: 2026-07-25
 
 ## What was built

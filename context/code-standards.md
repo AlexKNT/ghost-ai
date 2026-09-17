@@ -12,7 +12,7 @@
 - Strict mode is required throughout the project.
 - Avoid `any`; use explicit interfaces or narrowly scoped types.
 - Validate unknown external input at system boundaries before trusting it.
-- Use `interface` for object contracts.
+- Use `interface` for object contracts. Liveblocks storage types are the exception: they must be `type` aliases so they satisfy the `LsonObject` index signature.
 
 ## Next.js
 
@@ -44,7 +44,7 @@
 ## File Organization
 
 - `lib/` — shared infrastructure: Prisma client, auth helpers, utilities.
-- `trigger/` — all durable background tasks and AI workflows.
+- `src/trigger/` — all durable background tasks and AI workflows.
 - `components/` — UI composition only; no business logic.
 - `app/api/` — route handlers for auth, triggering, and persistence.
 - Name files after the responsibility they contain, not the technology.
